@@ -1,0 +1,65 @@
+/* "Midnight Arena" Design System Tokens */
+:root {
+  --bg: #F6F7FB;
+  --surface-1: #FFFFFF;
+  --surface-2: #EEF0F6;
+  --border: #DADDE8;
+  --text: #0B0D14;
+  --text-muted: #5A6075;
+  --accent: #2F5BEA;
+  --accent-hover: #2449c2;
+  --ps5: #1C7FD0;
+  --ps4: #6A4BE0;
+  --arcade: #C77F00;
+  --success: #119A5F;
+  --warning: #B87400;
+  --danger: #D42A3D;
+
+  --tier-rookie: #8A90A6;
+  --tier-bronze: #C98A5A;
+  --tier-silver: #9AA3B8;
+  --tier-gold: #D9A328;
+  --tier-platinum: #38B8A6;
+  --tier-diamond: #5375DC;
+
+  --font-display: 'Sora', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-bangla: 'Hind Siliguri', sans-serif;
+}
+
+.dark {
+  --bg: #07080D;
+  --surface-1: #0E1018;
+  --surface-2: #151826;
+  --border: #23273A;
+  --text: #EEF0F7;
+  --text-muted: #9AA1B9;
+  --accent: #4F7CFF;
+  --accent-hover: #3b68ee;
+  --ps5: #3DA9FC;
+  --ps4: #8B6CFF;
+  --arcade: #FFB224;
+  --success: #2BD98A;
+  --warning: #FFB224;
+  --danger: #FF5C6C;
+
+  --tier-rookie: #8A90A6;
+  --tier-bronze: #C98A5A;
+  --tier-silver: #C9D1E0;
+  --tier-gold: #F5C451;
+  --tier-platinum: #7FE3D6;
+  --tier-diamond: #9DB8FF;
+}
+
+/* Platform Edge Glow signatures per design.md */
+.ps5-glow {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ps5) 40%, transparent), 0 8px 32px -12px color-mix(in oklab, var(--ps5) 55%, transparent);
+}
+
+.ps4-glow {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ps4) 40%, transparent), 0 8px 32px -12px color-mix(in oklab, var(--ps4) 55%, transparent);
+}
+
+.arcade-glow {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--arcade) 40%, transparent), 0 8px 32px -12px color-mix(in oklab, var(--arcade) 55%, transparent);
+}

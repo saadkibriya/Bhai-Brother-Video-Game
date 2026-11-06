@@ -1,0 +1,6 @@
+{
+  "name": "Bhai Brother Video Game",
+  "description": "Bhai Brother Video Game – PS5, PS4, and arcade gaming lounge in Green City, Dhaka Uddan, Mohammadpur, Dhaka. Live station availability, pricing, and booking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
