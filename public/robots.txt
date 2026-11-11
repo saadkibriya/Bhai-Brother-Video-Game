@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://bhaibrother.pages.dev/sitemap.xml
+Sitemap: https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page/sitemap.xml

@@ -1,28 +1,18 @@
-name: CI Tests & Quality Checks
+name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install
-        run: npm ci
-
-      - name: Lint & Typecheck
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run build
