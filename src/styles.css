@@ -1827,3 +1827,24 @@ h3 {
     gap: 1.3rem 1.8rem;
   }
 }
+
+/* Very narrow phones: keep the wordmark on one line next to the controls. */
+@media (max-width: 380px) {
+  .header-inner {
+    gap: 0.6rem;
+  }
+
+  .brand {
+    gap: 0.4rem;
+  }
+
+  .brand-name {
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .menu-btn {
+    padding: 0.5rem 0.6rem;
+  }
+}
