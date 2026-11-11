@@ -84,7 +84,7 @@ function authorized(request, env) {
 const dhakaDayStart = (now) =>
   Math.floor((now + DHAKA_OFFSET) / 86400000) * 86400000 - DHAKA_OFFSET;
 
-async function readState(env) {
+async function readState(env, includePlayer = false) {
   const now = Date.now();
   const stations = await env.DB.prepare(
     'SELECT id, name, platform, status, started_at, ends_at, minutes, player, note, updated_at FROM stations ORDER BY sort, name'
@@ -111,7 +111,7 @@ async function readState(env) {
       startedAt: row.started_at,
       endsAt: row.ends_at,
       minutes: row.minutes,
-      player: row.player,
+      player: includePlayer ? row.player : null,
       note: row.note,
       updatedAt: row.updated_at,
     })),
@@ -207,7 +207,8 @@ export default {
       await ensureSchema(env);
 
       if (url.pathname === '/api/status' && request.method === 'GET') {
-        return json(await readState(env));
+        // Player names stay admin-only; the public board gets status and timers.
+        return json(await readState(env, authorized(request, env)));
       }
 
       if (url.pathname === '/api/admin/verify' && request.method === 'POST') {
@@ -223,7 +224,7 @@ export default {
         const body = await request.json().catch(() => null);
         const result = await setStation(env, body);
         if (result.error) return json({ error: result.error }, result.status);
-        return json(await readState(env));
+        return json(await readState(env, true));
       }
 
       return json({ error: 'Not found' }, 404);

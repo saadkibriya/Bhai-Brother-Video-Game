@@ -37,8 +37,11 @@ async function readError(response: Response): Promise<string> {
   return body?.error ?? 'The counter API did not answer.';
 }
 
-export async function fetchState(): Promise<ShopState> {
-  const response = await fetch('/api/status', { cache: 'no-store' });
+export async function fetchState(key?: string): Promise<ShopState> {
+  const response = await fetch('/api/status', {
+    cache: 'no-store',
+    headers: key ? { 'x-admin-key': key } : undefined,
+  });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as ShopState;
 }

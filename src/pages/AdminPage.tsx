@@ -62,7 +62,7 @@ export function AdminPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        setState(await fetchState());
+        setState(await fetchState(key || undefined));
       } catch {
         /* keep the last known state */
       }
@@ -76,7 +76,7 @@ export function AdminPage() {
       window.clearInterval(poll);
       window.clearInterval(clock);
     };
-  }, []);
+  }, [key]);
 
   useEffect(() => {
     if (!key) return;
