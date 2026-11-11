@@ -8,3 +8,6 @@ coverage/
 !.env.example
 
 artifacts/
+
+# Local admin key used when setting the Sites secret
+.admin-key

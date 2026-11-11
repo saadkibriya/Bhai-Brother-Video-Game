@@ -33,6 +33,7 @@ export function Footer() {
             <Link to="/pricing">Rates &amp; passes</Link>
             <Link to="/book">Book a station</Link>
             <Link to="/visit">Visit</Link>
+            <Link to="/admin">Staff panel</Link>
           </div>
         </div>
 

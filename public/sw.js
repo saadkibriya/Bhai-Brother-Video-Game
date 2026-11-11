@@ -17,7 +17,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  if (new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  // Live station status must never come from a cache.
+  if (url.pathname.startsWith('/api/')) return;
 
   event.respondWith(
     (async () => {

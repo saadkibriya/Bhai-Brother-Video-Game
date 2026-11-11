@@ -52,3 +52,27 @@ site (Freebuff Sites). The app uses client-side routing, so the host must serve
 
 `supabase/` and the old spec documents were removed with the fake backend; they remain in
 git history if a real booking database is ever added.
+
+## Live station status and the counter panel
+
+`/` shows a live board for the three stations (PS5 #1, PS4 #1, Arcade cabinet): free, in use with a
+running timer, or blocked. The counter panel is `/admin` — the footer links to it as "Staff panel".
+
+Both are backed by the Worker API in `deploy/worker.js` and a D1 database bound as `DB`:
+
+| Route | Method | Auth | Purpose |
+| --- | --- | --- | --- |
+| `/api/status` | GET | none | Stations, running timers, today's session count |
+| `/api/admin/verify` | POST | `x-admin-key` | Check the key before unlocking the panel |
+| `/api/station` | POST | `x-admin-key` | `{ id, action }` with `start` \| `stop` \| `block` \| `unblock` |
+
+The Worker creates the `stations` and `sessions` tables and seeds the three stations on first use.
+`start` stamps `started_at`; `stop` writes the rounded minute count to `sessions` and frees the
+station; `block` marks it out of service (and refuses to start a timer until unblocked).
+
+The panel key lives in the `ADMIN_KEY` secret, never in the bundle. Set it under
+**Sites → Secrets**, then open `/admin` and unlock with the same value. The key is kept in
+`sessionStorage` for that tab only, and the panel's Lock button clears it. If `ADMIN_KEY` is
+missing, the public board still works and the panel says so instead of accepting writes.
+
+`ADMIN_KEY` must be set for both the preview and production environments before writes work there.

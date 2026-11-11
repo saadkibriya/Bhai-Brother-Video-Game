@@ -1941,3 +1941,183 @@ h3 {
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* --- live station board --------------------------------------------------- */
+
+.live .section-head {
+  margin-bottom: clamp(1.4rem, 4vw, 2.2rem);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.station {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 1.15rem 1.25rem 1.3rem;
+  background: var(--ink-3);
+}
+
+.station__platform,
+.station__meta {
+  font: 500 0.68rem/1.3 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.station h3 {
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+}
+
+.station__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  font: 500 0.8rem/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.station__dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.station[data-status='free'] .station__dot {
+  background: var(--open);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--open) 18%, transparent);
+}
+
+.station[data-status='busy'] .station__dot {
+  background: var(--flame);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--flame) 20%, transparent);
+  animation: station-pulse 2s ease-in-out infinite;
+}
+
+.station[data-status='blocked'] .station__dot {
+  background: var(--danger);
+}
+
+.station[data-status='busy'] .station__status {
+  color: var(--flame-soft);
+}
+
+.station[data-status='blocked'] .station__status {
+  color: var(--danger);
+}
+
+@keyframes station-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.board-note {
+  padding: 1.1rem 1.2rem;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.board--compact .station {
+  padding: 0.9rem 1rem;
+}
+
+.board--compact .station h3 {
+  font-size: 1.15rem;
+}
+
+/* --- counter panel ------------------------------------------------------- */
+
+.admin-lock {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 34rem;
+}
+
+.admin-lock__row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.admin-lock__row .input {
+  flex: 1 1 14rem;
+}
+
+.admin-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.4rem;
+}
+
+.admin-bar__stat {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+
+.board--admin {
+  grid-template-columns: 1fr;
+}
+
+.station--admin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.station__timer {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--flame);
+}
+
+.station__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-log {
+  margin-top: 2.2rem;
+}
+
+.admin-log .pass-table {
+  width: 100%;
+  margin-top: 0.8rem;
+}
+
+@media (max-width: 560px) {
+  .station--admin {
+    align-items: flex-start;
+  }
+
+  .station__actions {
+    width: 100%;
+  }
+
+  .station__actions .btn {
+    flex: 1;
+  }
+}

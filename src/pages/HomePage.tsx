@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BAYS, FAQS, GAMES, PASSES, SHOP, TOURNAMENT, photos } from '../data/shop';
 import { GameCard } from '../components/GameCard';
+import { LiveBoard } from '../components/LiveBoard';
 import { OpenStatus } from '../components/OpenStatus';
 import { ArrowIcon, ChatIcon, PinIcon } from '../components/icons';
 import { whatsappUrl } from '../lib/booking';
@@ -109,6 +110,28 @@ export function HomePage() {
       </section>
 
       <Ticker />
+
+      <section className="band band--ink-2 live" id="live">
+        <div className="wrap">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">01 / Right now</p>
+              <h2>What&rsquo;s free.</h2>
+            </div>
+            <p>
+              The counter updates this as sessions start and end. Timers are running for stations
+              in use; anything blocked is out of service.
+            </p>
+          </div>
+
+          <LiveBoard />
+
+          <p className="note note--dark">
+            <span aria-hidden="true">✱</span> Everything busy? Send a booking request and we will
+            hold the next free station for you.
+          </p>
+        </div>
+      </section>
 
       <section className="band band--paper" id="rates">
         <div className="wrap">

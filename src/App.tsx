@@ -7,6 +7,7 @@ import { GamesPage } from './pages/GamesPage';
 import { PricingPage } from './pages/PricingPage';
 import { BookPage } from './pages/BookPage';
 import { VisitPage } from './pages/VisitPage';
+import { AdminPage } from './pages/AdminPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 function ScrollToTop() {
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/book" element={<BookPage />} />
           <Route path="/visit" element={<VisitPage />} />
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
