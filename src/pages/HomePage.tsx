@@ -53,8 +53,8 @@ export function HomePage() {
             </p>
 
             <div className="hero__actions">
-              <Link className="btn btn--flame btn--xl" to="/book">
-                Book now <ArrowIcon />
+              <Link className="btn btn--flame btn--xl btn--cta" to="/book">
+                Book a slot <ArrowIcon className="btn__arrow" />
               </Link>
               <a className="btn btn--ghost" href={SHOP.map} target="_blank" rel="noreferrer">
                 <PinIcon /> Get directions
@@ -77,7 +77,18 @@ export function HomePage() {
                   ৳10<span>/3 tokens</span>
                 </dd>
               </div>
+              <div>
+                <dt>Half hour</dt>
+                <dd>
+                  ৳35<span>PS5 · ৳25 PS4</span>
+                </dd>
+              </div>
             </dl>
+
+            <p className="hero__half">
+              <span aria-hidden="true">✱</span> In a hurry? 30 minutes is a real session — ৳35 on
+              PS5, ৳25 on PS4.
+            </p>
           </div>
 
           <figure className="hero__shot">
@@ -135,6 +146,20 @@ export function HomePage() {
               <p className="rate-row__price">
                 ৳10
                 <small>3 tokens</small>
+              </p>
+            </div>
+
+            <div className="rate-row">
+              <p className="rate-row__name">
+                Half hour
+                <small>30 minutes on either station</small>
+              </p>
+              <p className="rate-row__copy">
+                Short visit between classes or before dinner? Half an hour, same four controllers,
+                no strings.
+              </p>
+              <p className="rate-row__price">
+                ৳35<small>30 min on PS5 · PS4 ৳25</small>
               </p>
             </div>
           </div>

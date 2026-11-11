@@ -217,6 +217,9 @@ export function BookPage() {
                         </button>
                       ))}
                     </div>
+                    <p className="field__hint">
+                      30 minutes counts as a full session — ৳35 on PS5, ৳25 on PS4.
+                    </p>
                   </fieldset>
 
                   <fieldset className="field">

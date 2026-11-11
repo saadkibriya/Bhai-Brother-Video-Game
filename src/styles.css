@@ -1848,3 +1848,96 @@ h3 {
     padding: 0.5rem 0.6rem;
   }
 }
+
+/* --- call to action: a nudge, not a blinking sign ------------------------ */
+
+.btn--cta {
+  position: relative;
+  overflow: hidden;
+  animation: cta-breathe 3.6s ease-in-out infinite;
+}
+
+.btn--cta::after {
+  content: '';
+  position: absolute;
+  top: -12%;
+  bottom: -12%;
+  left: -60%;
+  width: 42%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: skewX(-18deg);
+  animation: cta-sheen 4.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.btn--cta .btn__arrow {
+  animation: arrow-nudge 3.6s ease-in-out infinite;
+}
+
+@keyframes cta-breathe {
+  0%,
+  100% {
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 0 rgba(255, 90, 31, 0.5);
+  }
+  55% {
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 9px rgba(255, 90, 31, 0);
+  }
+}
+
+@keyframes cta-sheen {
+  0%,
+  62% {
+    left: -60%;
+  }
+  88%,
+  100% {
+    left: 125%;
+  }
+}
+
+@keyframes arrow-nudge {
+  0%,
+  60%,
+  100% {
+    transform: translateX(0);
+  }
+  70% {
+    transform: translateX(4px);
+  }
+  80% {
+    transform: translateX(0);
+  }
+}
+
+/* --- half hour visibility ------------------------------------------------ */
+
+.hero__half {
+  margin-top: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.hero__half span[aria-hidden] {
+  color: var(--flame);
+}
+
+.hero__half strong {
+  color: var(--text);
+}
+
+.bay__half {
+  font: 500 0.68rem/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-ink);
+  padding-top: 0.7rem;
+  border-top: 1px dashed var(--paper-line);
+}
+
+.field__hint {
+  margin-top: 0.6rem;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}

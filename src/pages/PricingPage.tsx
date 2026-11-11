@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { ARCADE, BAYS, PASSES, SHOP } from '../data/shop';
 import { Calculator } from '../components/Calculator';
 import { ArrowIcon } from '../components/icons';
-import { formatTaka } from '../lib/pricing';
+import { formatTaka, quote } from '../lib/pricing';
 
 export function PricingPage() {
   return (
@@ -31,6 +31,9 @@ export function PricingPage() {
                   <span> / station / hour</span>
                 </p>
                 <p className="bay__copy">{bay.copy}</p>
+                <p className="bay__half">
+                  30 min session — {formatTaka(quote(bay.id, 30).total)}
+                </p>
                 <ul className="bay__specs">
                   {bay.specs.map((spec) => (
                     <li key={spec}>{spec}</li>

@@ -41,7 +41,7 @@ export function Header() {
         </a>
         <ThemeToggle />
         <Link className="btn btn--flame header-cta" to="/book">
-          Book now
+          Book a slot
         </Link>
 
         <button
