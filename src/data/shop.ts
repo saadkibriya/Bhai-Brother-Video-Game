@@ -128,7 +128,7 @@ export const FAQS = [
   },
   {
     q: 'Is the price per person or per station?',
-    a: 'Per station, per hour. Up to four people can share a PS5 or PS4 and it costs the same. Arcade tokens are separate.',
+    a: 'Per person. Each player pays ৳70/hr on PS5 or ৳50/hr on PS4, and a half hour is ৳40 or ৳30. Four people on one station each pay their share; arcade tokens are separate.',
   },
   {
     q: 'How many controllers do you have?',

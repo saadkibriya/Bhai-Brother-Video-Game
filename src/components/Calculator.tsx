@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { DURATIONS, RATES, durationLabel, formatTaka, quote, type Platform } from '../lib/pricing';
 
+const PLAYERS = [1, 2, 3, 4];
+
 export function Calculator() {
   const [platform, setPlatform] = useState<Platform>('ps5');
   const [duration, setDuration] = useState<number>(120);
-  const result = quote(platform, duration);
+  const [players, setPlayers] = useState(2);
+  const result = quote(platform, duration, players);
 
   return (
     <div className="calc">
@@ -40,6 +43,23 @@ export function Calculator() {
             </button>
           ))}
         </div>
+
+        <p className="field__label" style={{ marginTop: '1.6rem' }}>
+          How many playing?
+        </p>
+        <div className="choice-row" role="group" aria-label="Players">
+          {PLAYERS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="choice"
+              aria-pressed={players === option}
+              onClick={() => setPlayers(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="calc__out">
@@ -47,18 +67,15 @@ export function Calculator() {
           <p className="field__label">Your session</p>
           <p className="calc__price">{formatTaka(result.total)}</p>
           <p className="muted calc__line">
-            {durationLabel(result.minutes)} on {platform.toUpperCase()} · up to 4 players
+            {durationLabel(result.minutes)} on {platform.toUpperCase()} · {players}{' '}
+            {players === 1 ? 'player' : 'players'} · {formatTaka(result.perPerson)} each
           </p>
         </div>
         <p className="note">
           {result.pass ? (
-            <>
-              Squad pass applied — you save {formatTaka(result.saved)}.
-            </>
+            <>Squad pass applied — you save {formatTaka(result.saved)}.</>
           ) : (
-            <>
-              Billed by the half hour. Extra players cost nothing — the station is the station.
-            </>
+            <>Billed by the half hour, per person. Every player pays their share.</>
           )}
         </p>
       </div>

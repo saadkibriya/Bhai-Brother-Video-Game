@@ -21,11 +21,16 @@ describe('pricing', () => {
     expect(round5(101)).toBe(105);
   });
 
-  test('uses the station rate, not a per-player rate', () => {
-    expect(quote('ps5', 30).total).toBe(35);
-    expect(quote('ps4', 30).total).toBe(25);
+  test('prices per person, with a separate half-hour rate', () => {
+    expect(quote('ps5', 30).total).toBe(40);
+    expect(quote('ps4', 30).total).toBe(30);
     expect(quote('ps5', 120).total).toBe(140);
     expect(quote('ps4', 120).total).toBe(100);
+
+    // Per person: four friends on one PS5 for two hours pay four shares.
+    expect(quote('ps5', 120, 4).total).toBe(560);
+    expect(quote('ps5', 30, 2).total).toBe(80);
+    expect(quote('ps4', 30, 3)).toMatchObject({ perPerson: 30, total: 90 });
   });
 
   test('applies the 3-hour squad pass when it is cheaper', () => {
@@ -37,6 +42,10 @@ describe('pricing', () => {
     const ps4 = quote('ps4', 180);
     expect(ps4.total).toBe(135);
     expect(ps4.saved).toBe(15);
+
+    const squad = quote('ps5', 180, 2);
+    expect(squad.total).toBe(380);
+    expect(squad.saved).toBe(40);
   });
 
   test('does not invent a pass discount for other lengths', () => {
@@ -46,8 +55,8 @@ describe('pricing', () => {
   test('offers a 30 minute session alongside the longer blocks', () => {
     expect(DURATIONS).toContain(30);
     expect(durationLabel(30)).toBe('30 min');
-    expect(quote('ps5', 30)).toMatchObject({ minutes: 30, total: 35 });
-    expect(quote('ps4', 30).total).toBe(25);
+    expect(quote('ps5', 30)).toMatchObject({ minutes: 30, total: 40 });
+    expect(quote('ps4', 30).total).toBe(30);
   });
 });
 
@@ -143,7 +152,7 @@ describe('bookings', () => {
     expect(message).toContain('Rafi');
     expect(message).toContain('PS5 · 2 players');
     expect(message).toContain('Sat 14 Nov, 6 PM – 8 PM');
-    expect(message).toContain('৳140');
+    expect(message).toContain('৳280 for 2 (৳140 each)');
     expect(message).toContain('FC 26');
     expect(message).not.toContain('undefined');
   });

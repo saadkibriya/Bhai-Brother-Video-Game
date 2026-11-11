@@ -101,10 +101,10 @@ export interface BookingRequest {
 }
 
 export function buildBookingMessage(request: BookingRequest): string {
-  const estimate = quote(request.platform, request.duration);
+  const estimate = quote(request.platform, request.duration, request.players);
   const priceLine = estimate.pass
-    ? `৳${estimate.total} (${estimate.pass} — saves ৳${estimate.saved})`
-    : `৳${estimate.total}`;
+    ? `৳${estimate.total} for ${request.players} (${estimate.pass} — saves ৳${estimate.saved})`
+    : `৳${estimate.total} for ${request.players} (৳${estimate.perPerson} each)`;
 
   const lines = [
     `Booking request — ${SHOP.fullName}`,

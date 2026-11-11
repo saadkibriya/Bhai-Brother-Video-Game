@@ -54,7 +54,7 @@ export function BookPage() {
     }
   }, [dateIso, start, duration, slots.length]);
 
-  const estimate = quote(platform, duration);
+  const estimate = quote(platform, duration, players);
   const chosenDay = days.find((day) => day.iso === dateIso);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -218,7 +218,7 @@ export function BookPage() {
                       ))}
                     </div>
                     <p className="field__hint">
-                      30 minutes counts as a full session — ৳35 on PS5, ৳25 on PS4.
+                      30 minutes is ৳40 per person on PS5, ৳30 on PS4.
                     </p>
                   </fieldset>
 
@@ -302,7 +302,10 @@ export function BookPage() {
           <aside className="summary" aria-label="Booking summary">
             <p className="eyebrow">Your session</p>
             <p className="summary__total">{formatTaka(estimate.total)}</p>
-            <p className="mono muted">{durationLabel(estimate.minutes)} · up to 4 players</p>
+            <p className="mono muted">
+              {durationLabel(estimate.minutes)} · {players} {players === 1 ? 'player' : 'players'} ·{' '}
+              {formatTaka(estimate.perPerson)} each
+            </p>
 
             <div className="summary__lines">
               <p className="summary__line">
@@ -328,8 +331,7 @@ export function BookPage() {
             </div>
 
             <p className="summary__note">
-              Rates are per station, not per person. Pay at the counter after your session — cash,
-              bKash or Nagad.
+              Rates are per person. Pay at the counter after your session — cash, bKash or Nagad.
             </p>
             <Link className="summary__link" to="/pricing">
               See all rates &amp; passes

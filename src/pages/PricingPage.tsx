@@ -28,11 +28,11 @@ export function PricingPage() {
                 <p className="eyebrow">{bay.platforms}</p>
                 <p className="bay__price">
                   {formatTaka(bay.rate)}
-                  <span> / station / hour</span>
+                  <span> / person / hour</span>
                 </p>
                 <p className="bay__copy">{bay.copy}</p>
                 <p className="bay__half">
-                  30 min session — {formatTaka(quote(bay.id, 30).total)}
+                  30 min session — {formatTaka(quote(bay.id, 30).perPerson)} per person
                 </p>
                 <ul className="bay__specs">
                   {bay.specs.map((spec) => (
@@ -68,7 +68,7 @@ export function PricingPage() {
               <p className="eyebrow">Work it out</p>
               <h2>What will it cost?</h2>
             </div>
-            <p>Pick a station and a length. This is the same maths the counter uses.</p>
+            <p>Pick a station, a length and how many are playing. This is the same maths the counter uses.</p>
           </div>
           <Calculator />
         </div>
@@ -116,10 +116,10 @@ export function PricingPage() {
 
           <div className="fine-print">
             <p>
-              <strong>The small print.</strong> Rates are per station, up to four controllers. Half
-              hours are welcome: 30 minutes costs ৳35 on PS5 and ৳25 on PS4, then every extra half
-              hour is half the hourly rate. Last session starts one hour before closing. Booked
-              slots are held for 10 minutes. Pay at the counter by cash, bKash or Nagad.
+              <strong>The small print.</strong> Rates are per person, per hour. Half hours are ৳40 on
+              PS5 and ৳30 on PS4 per person; longer sessions are billed at the hourly rate in
+              half-hour steps. Last session starts one hour before closing. Booked slots are held
+              for 10 minutes. Pay at the counter by cash, bKash or Nagad.
             </p>
             <p>
               Questions about a big group or a full-day booking? Call{' '}

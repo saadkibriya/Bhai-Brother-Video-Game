@@ -67,7 +67,7 @@ export function HomePage() {
                   <dt>{bay.id.toUpperCase()}</dt>
                   <dd>
                     ৳{bay.rate}
-                    <span>/hr</span>
+                    <span>/hr each</span>
                   </dd>
                 </div>
               ))}
@@ -80,14 +80,14 @@ export function HomePage() {
               <div>
                 <dt>Half hour</dt>
                 <dd>
-                  ৳35<span>PS5 · ৳25 PS4</span>
+                  ৳40<span>PS5 · ৳30 PS4</span>
                 </dd>
               </div>
             </dl>
 
             <p className="hero__half">
-              <span aria-hidden="true">✱</span> In a hurry? 30 minutes is a real session — ৳35 on
-              PS5, ৳25 on PS4.
+              <span aria-hidden="true">✱</span> In a hurry? 30 minutes is a real session — ৳40 on
+              PS5, ৳30 on PS4, per person.
             </p>
           </div>
 
@@ -118,8 +118,8 @@ export function HomePage() {
               <h2>No packages to decode.</h2>
             </div>
             <p>
-              Pay by the hour, per station. Four friends on one screen still pay for one station.
-              We round to the nearest half hour.
+              Pay by the hour, per person. Bring three friends and each pays their own share. We
+              round to the nearest half hour.
             </p>
           </div>
 
@@ -133,7 +133,7 @@ export function HomePage() {
                 <p className="rate-row__copy">{bay.copy}</p>
                 <p className="rate-row__price">
                   ৳{bay.rate}
-                  <small>per station / hour</small>
+                  <small>per person / hour</small>
                 </p>
               </div>
             ))}
@@ -159,14 +159,14 @@ export function HomePage() {
                 no strings.
               </p>
               <p className="rate-row__price">
-                ৳35<small>30 min on PS5 · PS4 ৳25</small>
+                ৳40<small>30 min per person · PS4 ৳30</small>
               </p>
             </div>
           </div>
 
           <p className="note">
-            <span aria-hidden="true">✱</span> Half hours are fine — 30 minutes is ৳35 on PS5 or ৳25 on
-            PS4. Passes bring the hourly rate down too; see the{' '}
+            <span aria-hidden="true">✱</span> Half hours are fine — 30 minutes is ৳40 per person on
+            PS5 or ৳30 on PS4. Passes bring the hourly rate down too; see the{' '}
             <Link to="/pricing">rate card</Link>. Sessions are billed at the counter after you play.
           </p>
         </div>
