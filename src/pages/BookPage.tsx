@@ -285,6 +285,15 @@ export function BookPage() {
                   </p>
                 )}
 
+                <div className="rule">
+                  <p className="eyebrow">Come 10 minutes early</p>
+                  <p>
+                    We hold your station until 10 minutes after the start time. If nobody from the
+                    booking is there by then, the booking is lost and the station goes to the next
+                    person waiting.
+                  </p>
+                </div>
+
                 <button className="btn btn--flame btn--block" type="submit" disabled={slots.length === 0}>
                   <ChatIcon /> Send request on WhatsApp
                 </button>
@@ -332,6 +341,9 @@ export function BookPage() {
 
             <p className="summary__note">
               Rates are per person. Pay at the counter after your session — cash, bKash or Nagad.
+            </p>
+            <p className="summary__rule">
+              <strong>Arrive 10 minutes early.</strong> Late bookings are released after 10 minutes.
             </p>
             <Link className="summary__link" to="/pricing">
               See all rates &amp; passes

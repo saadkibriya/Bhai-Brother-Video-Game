@@ -7,12 +7,17 @@ export interface StationState {
   platform: string;
   status: StationStatus;
   startedAt: number | null;
+  endsAt: number | null;
+  minutes: number | null;
+  player: string | null;
   note: string | null;
   updatedAt: number;
 }
 
 export interface SessionRecord {
   stationId: string;
+  player: string | null;
+  plannedMinutes: number | null;
   startedAt: number;
   endedAt: number;
   minutes: number;
@@ -50,12 +55,13 @@ export async function adminVerify(key: string): Promise<void> {
 export async function adminAction(
   key: string,
   id: string,
-  action: StationAction
+  action: StationAction,
+  details: { player?: string; minutes?: number } = {}
 ): Promise<ShopState> {
   const response = await fetch('/api/station', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-admin-key': key },
-    body: JSON.stringify({ id, action }),
+    body: JSON.stringify({ id, action, ...details }),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(await readError(response));
@@ -70,6 +76,37 @@ export function elapsedLabel(startedAt: number, now: number): string {
   const seconds = total % 60;
   const pad = (value: number) => String(value).padStart(2, '0');
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
+}
+
+export const ALERT_MINUTES = [10, 5, 0] as const;
+export type AlertKind = 'ten' | 'five' | 'end';
+
+export const SESSION_LENGTHS = [30, 60, 90, 120, 180] as const;
+
+/** Alerts that have come due and have not been shown for this session yet. */
+export function alertsFor(endsAt: number, now: number, fired: AlertKind[]): AlertKind[] {
+  const left = endsAt - now;
+  const due: AlertKind[] = [];
+  if (left <= 10 * 60_000 && !fired.includes('ten')) due.push('ten');
+  if (left <= 5 * 60_000 && !fired.includes('five')) due.push('five');
+  if (left <= 0 && !fired.includes('end')) due.push('end');
+  return due;
+}
+
+/** "38 min left", "4 min left", or "Time is up". */
+export function remainingLabel(endsAt: number, now: number): string {
+  const left = endsAt - now;
+  if (left <= 0) return 'Time is up';
+  const minutes = Math.ceil(left / 60_000);
+  return `${minutes} min left`;
+}
+
+export function clockLabel(endsAt: number): string {
+  return new Date(endsAt).toLocaleTimeString('en-GB', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Asia/Dhaka',
+  });
 }
 
 export function statusLabel(status: StationStatus): string {

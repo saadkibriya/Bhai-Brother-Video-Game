@@ -136,7 +136,7 @@ export const FAQS = [
   },
   {
     q: 'How early should we arrive?',
-    a: 'Come 10 minutes before your slot so we can set the game up and hand over the pads. If you are more than 10 minutes late, the station may go to someone waiting.',
+    a: 'At least 10 minutes before your slot, so we can set the game up and hand over the pads. We only hold a booking until 10 minutes after the start time — after that the booking is lost and the station goes to walk-ins. If you are running late, call the counter.',
   },
   {
     q: 'How do we pay?',

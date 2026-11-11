@@ -106,6 +106,7 @@ export function VisitPage() {
               <ul className="visit__list">
                 <li>Walk-ins welcome — book ahead for Friday and Saturday evenings.</li>
                 <li>Four controllers per station; every player pays their own share.</li>
+                <li>Arrive 10 minutes before a booked slot — after 10 minutes the booking is lost.</li>
                 <li>Cash, bKash and Nagad accepted at the counter.</li>
                 <li>No smoking or vaping inside.</li>
               </ul>
