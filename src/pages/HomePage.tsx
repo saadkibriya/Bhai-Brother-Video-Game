@@ -140,7 +140,8 @@ export function HomePage() {
           </div>
 
           <p className="note">
-            <span aria-hidden="true">✱</span> Passes bring the hourly rate down — see the{' '}
+            <span aria-hidden="true">✱</span> Half hours are fine — 30 minutes is ৳35 on PS5 or ৳25 on
+            PS4. Passes bring the hourly rate down too; see the{' '}
             <Link to="/pricing">rate card</Link>. Sessions are billed at the counter after you play.
           </p>
         </div>

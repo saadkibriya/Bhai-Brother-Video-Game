@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DURATIONS, RATES, formatTaka, quote, type Platform } from '../lib/pricing';
+import { DURATIONS, RATES, durationLabel, formatTaka, quote, type Platform } from '../lib/pricing';
 
 export function Calculator() {
   const [platform, setPlatform] = useState<Platform>('ps5');
@@ -36,7 +36,7 @@ export function Calculator() {
               aria-pressed={duration === option}
               onClick={() => setDuration(option)}
             >
-              {option / 60} hr
+              {durationLabel(option)}
             </button>
           ))}
         </div>
@@ -47,7 +47,7 @@ export function Calculator() {
           <p className="field__label">Your session</p>
           <p className="calc__price">{formatTaka(result.total)}</p>
           <p className="muted calc__line">
-            {result.minutes / 60} hr on {platform.toUpperCase()} · up to 4 players
+            {durationLabel(result.minutes)} on {platform.toUpperCase()} · up to 4 players
           </p>
         </div>
         <p className="note">

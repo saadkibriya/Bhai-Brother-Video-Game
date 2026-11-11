@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { billableMinutes, quote, round5 } from '../../src/lib/pricing';
+import { DURATIONS, billableMinutes, durationLabel, quote, round5 } from '../../src/lib/pricing';
 import { dhakaNow, formatTime, openStatus } from '../../src/lib/hours';
 import {
   buildBookingMessage,
@@ -40,6 +40,13 @@ describe('pricing', () => {
 
   test('does not invent a pass discount for other lengths', () => {
     expect(quote('ps5', 150).pass).toBeNull();
+  });
+
+  test('offers a 30 minute session alongside the longer blocks', () => {
+    expect(DURATIONS).toContain(30);
+    expect(durationLabel(30)).toBe('30 min');
+    expect(quote('ps5', 30)).toMatchObject({ minutes: 30, total: 35 });
+    expect(quote('ps4', 30).total).toBe(25);
   });
 });
 

@@ -14,7 +14,7 @@ import {
   upcomingDays,
   whatsappUrl,
 } from '../lib/booking';
-import { quote, formatTaka, RATES, type Platform } from '../lib/pricing';
+import { DURATIONS, quote, durationLabel, formatTaka, RATES, type Platform } from '../lib/pricing';
 
 const PLAYER_OPTIONS = [1, 2, 3, 4];
 
@@ -198,7 +198,7 @@ export function BookPage() {
                   <fieldset className="field">
                     <legend>How long?</legend>
                     <div className="choice-row">
-                      {[60, 90, 120, 180].map((option) => (
+                      {DURATIONS.map((option) => (
                         <button
                           key={option}
                           type="button"
@@ -207,7 +207,7 @@ export function BookPage() {
                           disabled={slots.length > 0 && !fits(dateIso, start, option)}
                           onClick={() => setDuration(option)}
                         >
-                          {option / 60} hr
+                          {durationLabel(option)}
                         </button>
                       ))}
                     </div>
@@ -293,7 +293,7 @@ export function BookPage() {
           <aside className="summary" aria-label="Booking summary">
             <p className="eyebrow">Your session</p>
             <p className="summary__total">{formatTaka(estimate.total)}</p>
-            <p className="mono muted">{estimate.minutes / 60} hr · up to 4 players</p>
+            <p className="mono muted">{durationLabel(estimate.minutes)} · up to 4 players</p>
 
             <div className="summary__lines">
               <p className="summary__line">

@@ -113,10 +113,10 @@ export function PricingPage() {
 
           <div className="fine-print">
             <p>
-              <strong>The small print.</strong> Rates are per station, up to four controllers.
-              Time is billed in half-hour steps, minimum 30 minutes. Last session starts one hour
-              before closing. Booked slots are held for 10 minutes. Pay at the counter by cash,
-              bKash or Nagad.
+              <strong>The small print.</strong> Rates are per station, up to four controllers. Half
+              hours are welcome: 30 minutes costs ৳35 on PS5 and ৳25 on PS4, then every extra half
+              hour is half the hourly rate. Last session starts one hour before closing. Booked
+              slots are held for 10 minutes. Pay at the counter by cash, bKash or Nagad.
             </p>
             <p>
               Questions about a big group or a full-day booking? Call{' '}

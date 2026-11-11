@@ -12,7 +12,7 @@ export const SQUAD_PASS: Record<Platform, { minutes: number; price: number }> = 
   ps4: { minutes: 180, price: 135 },
 };
 
-export const DURATIONS = [60, 90, 120, 180] as const;
+export const DURATIONS = [30, 60, 90, 120, 180] as const;
 
 export interface Quote {
   minutes: number;
@@ -50,6 +50,7 @@ export function formatTaka(amount: number): string {
 }
 
 export function durationLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
   const hours = minutes / 60;
   return Number.isInteger(hours) ? `${hours} hr` : `${hours} hr`;
 }
