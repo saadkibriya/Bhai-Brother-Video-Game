@@ -20,10 +20,16 @@ const PLAYER_OPTIONS = [1, 2, 3, 4];
 
 export function BookPage() {
   const days = useMemo(() => upcomingDays(10), []);
+  // Start on the first day that still has a bookable slot, so late-night
+  // visitors land on tomorrow instead of an empty "no slots left" form.
+  const firstOpenDay = useMemo(
+    () => days.find((day) => slotsFor(day.iso).length > 0) ?? days[0],
+    [days]
+  );
   const [platform, setPlatform] = useState<Platform>('ps5');
-  const [dateIso, setDateIso] = useState(days[0].iso);
-  const [slots, setSlots] = useState<number[]>(() => slotsFor(days[0].iso));
-  const [start, setStart] = useState<number>(() => slotsFor(days[0].iso)[0] ?? 0);
+  const [dateIso, setDateIso] = useState(firstOpenDay.iso);
+  const [slots, setSlots] = useState<number[]>(() => slotsFor(firstOpenDay.iso));
+  const [start, setStart] = useState<number>(() => slotsFor(firstOpenDay.iso)[0] ?? 0);
   const [duration, setDuration] = useState(120);
   const [players, setPlayers] = useState(2);
   const [name, setName] = useState('');
