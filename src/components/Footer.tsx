@@ -12,6 +12,7 @@ export function Footer() {
             <p className="footer-line">{SHOP.address}</p>
             <p className="footer-line muted">{SHOP.landmark}</p>
             <a href={`tel:${SHOP.tel}`}>{SHOP.phone}</a>
+            <p className="footer-line muted">WhatsApp @{SHOP.whatsappHandle}</p>
             <a href={SHOP.map} target="_blank" rel="noreferrer">
               Google Maps ↗
             </a>

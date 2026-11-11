@@ -6,6 +6,7 @@ import { HOURS, dhakaNow, hoursSummary } from '../lib/hours';
 
 export function VisitPage() {
   const today = dhakaNow().weekday;
+  const waLink = whatsappUrl('Hi! I have a question about the shop.');
 
   return (
     <>
@@ -50,10 +51,20 @@ export function VisitPage() {
             </div>
 
             <p className="note note--dark">
-              <span aria-hidden="true">✱</span> Calling is faster if you are already outside:{' '}
+              <span aria-hidden="true">✱</span> Two ways to reach the counter:{' '}
               <a className="link-underline" href={`tel:${SHOP.tel}`}>
-                {SHOP.phone}
+                call {SHOP.phone}
+              </a>{' '}
+              or message{' '}
+              <a
+                className="link-underline"
+                href={waLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                WhatsApp @{SHOP.whatsappHandle}
               </a>
+              .
             </p>
 
             <iframe

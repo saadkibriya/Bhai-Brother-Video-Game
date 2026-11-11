@@ -280,8 +280,8 @@ export function BookPage() {
                   <ChatIcon /> Send request on WhatsApp
                 </button>
                 <p className="summary__note">
-                  This opens WhatsApp with your request written out. The counter replies there to
-                  confirm. Prefer to talk?{' '}
+                  This opens a WhatsApp chat with the counter (@{SHOP.whatsappHandle}) and your
+                  request written out. They reply there to confirm. Prefer to talk?{' '}
                   <a className="link-underline" href={`tel:${SHOP.tel}`}>
                     <PhoneIcon /> Call {SHOP.phone}
                   </a>

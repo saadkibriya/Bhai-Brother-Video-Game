@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { SHOP } from '../data/shop';
 import { OpenStatus } from './OpenStatus';
+import { ThemeToggle } from './ThemeToggle';
 import { PhoneIcon } from './icons';
 
 const LINKS = [
@@ -38,8 +39,9 @@ export function Header() {
           <PhoneIcon />
           {SHOP.phone}
         </a>
+        <ThemeToggle />
         <Link className="btn btn--flame header-cta" to="/book">
-          Book a station
+          Book now
         </Link>
 
         <button
@@ -55,7 +57,10 @@ export function Header() {
 
       <div id="mobile-nav" className={`mobile-nav${menuOpen ? ' is-open' : ''}`} hidden={!menuOpen}>
         <div className="wrap">
-          <OpenStatus />
+          <div className="mobile-nav__row">
+            <OpenStatus />
+            <ThemeToggle />
+          </div>
           <nav aria-label="Mobile">
             {LINKS.map((link) => (
               <NavLink key={link.to} to={link.to} end={link.to === '/'}>

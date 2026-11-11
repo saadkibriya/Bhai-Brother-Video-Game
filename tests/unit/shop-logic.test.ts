@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { SHOP } from '../../src/data/contact';
 import { DURATIONS, billableMinutes, durationLabel, quote, round5 } from '../../src/lib/pricing';
 import { dhakaNow, formatTime, openStatus } from '../../src/lib/hours';
 import {
@@ -149,7 +150,7 @@ describe('bookings', () => {
 
   test('encodes the WhatsApp deep link', () => {
     const url = whatsappUrl('Hello & welcome');
-    expect(url.startsWith('https://wa.me/8801775533852?text=')).toBe(true);
+    expect(url.startsWith(`https://wa.me/${SHOP.whatsapp}?text=`)).toBe(true);
     expect(decodeURIComponent(url.split('text=')[1])).toBe('Hello & welcome');
   });
 });

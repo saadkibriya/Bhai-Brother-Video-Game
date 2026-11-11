@@ -53,8 +53,8 @@ export function HomePage() {
             </p>
 
             <div className="hero__actions">
-              <Link className="btn btn--flame" to="/book">
-                Book a station <ArrowIcon />
+              <Link className="btn btn--flame btn--xl" to="/book">
+                Book now <ArrowIcon />
               </Link>
               <a className="btn btn--ghost" href={SHOP.map} target="_blank" rel="noreferrer">
                 <PinIcon /> Get directions

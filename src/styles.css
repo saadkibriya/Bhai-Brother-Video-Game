@@ -18,12 +18,34 @@
   --flame: #ff5a1f;
   --flame-soft: #ff8355;
   --open: #a9e46a;
+  --on-accent: #0b0b0d;
+  --danger: #ff8f7d;
+  --grain-opacity: 0.055;
   --font-display: 'Anton', 'Arial Narrow', Impact, sans-serif;
   --font-body: 'Instrument Sans Variable', 'Instrument Sans', system-ui, -apple-system, sans-serif;
   --font-bn: 'Hind Siliguri', 'Noto Sans Bengali', sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --wrap: 1180px;
   --radius: 2px;
+}
+
+/* Light theme — the daylight counterpart to the ink default. */
+[data-theme='light'] {
+  --ink: #f4eee3;
+  --ink-2: #ece4d6;
+  --ink-3: #e2d8c6;
+  --line: #d5cab6;
+  --paper: #ffffff;
+  --paper-2: #f8f3e9;
+  --paper-line: #e2d8c5;
+  --text: #17150f;
+  --text-ink: #121110;
+  --muted: #5f594e;
+  --muted-ink: #5f594e;
+  --flame-soft: #b8400f;
+  --open: #2f7d1f;
+  --danger: #b3261e;
+  --grain-opacity: 0.03;
 }
 
 *,
@@ -81,7 +103,7 @@ button:disabled {
 
 ::selection {
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
 }
 
 :focus-visible {
@@ -180,7 +202,7 @@ h3 {
   top: -4rem;
   z-index: 100;
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
   padding: 0.7rem 1rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -221,7 +243,7 @@ h3 {
 
 .band--flame {
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
 }
 
 .grain::after {
@@ -229,7 +251,7 @@ h3 {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.055;
+  opacity: var(--grain-opacity);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -301,7 +323,7 @@ h3 {
 
 .btn--flame {
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
   box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -338,7 +360,7 @@ h3 {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(11, 11, 13, 0.94);
+  background: color-mix(in srgb, var(--ink) 94%, transparent);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(10px);
 }
@@ -592,9 +614,9 @@ h3 {
 
 .ticker {
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
   overflow: hidden;
-  border-bottom: 1px solid var(--ink);
+  border-bottom: 1px solid var(--on-accent);
 }
 
 .ticker__track {
@@ -748,7 +770,7 @@ h3 {
   place-items: center;
   font-family: var(--font-display);
   font-size: 2.6rem;
-  color: #3a3a41;
+  color: var(--line);
   letter-spacing: 0.02em;
 }
 
@@ -757,7 +779,7 @@ h3 {
   top: 0.55rem;
   left: 0.55rem;
   background: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
   padding: 0.28rem 0.4rem;
   font: 600 0.55rem/1 var(--font-mono);
   letter-spacing: 0.13em;
@@ -856,7 +878,7 @@ h3 {
 /* --- tournament ---------------------------------------------------------- */
 
 .tournament {
-  border-block: 1px solid var(--ink);
+  border-block: 1px solid var(--on-accent);
 }
 
 .tournament__grid {
@@ -879,7 +901,7 @@ h3 {
 }
 
 .tournament .btn {
-  background: var(--ink);
+  background: var(--on-accent);
   color: var(--paper);
   box-shadow: 3px 3px 0 rgba(11, 11, 13, 0.25);
 }
@@ -1338,7 +1360,7 @@ h3 {
 .slot[aria-pressed='true'] {
   background: var(--flame);
   border-color: var(--flame);
-  color: var(--ink);
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -1371,7 +1393,7 @@ h3 {
 
 .error {
   margin-top: 0.5rem;
-  color: #ff8f7d;
+  color: var(--danger);
   font-size: 0.82rem;
   line-height: 1.5;
 }
@@ -1531,7 +1553,7 @@ h3 {
   line-height: 0.8;
   text-transform: uppercase;
   color: transparent;
-  -webkit-text-stroke: 1px #33333a;
+  -webkit-text-stroke: 1px var(--line);
   user-select: none;
   overflow: hidden;
   white-space: nowrap;
@@ -1586,7 +1608,6 @@ h3 {
 
   .summary {
     position: static;
-    order: -1;
   }
 
   .bay-grid {
@@ -1675,5 +1696,126 @@ h3 {
 
   .ticker__track {
     animation: none;
+  }
+}
+
+/* --- theme switch -------------------------------------------------------- */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font: 500 0.56rem/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.theme-toggle__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.theme-toggle__dot--dark {
+  background: var(--flame);
+}
+
+.theme-toggle__dot--light {
+  background: #f0c040;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #f0c040 25%, transparent);
+}
+
+.mobile-nav__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* --- oversized hero call to action -------------------------------------- */
+
+.btn--xl {
+  padding: 1.1rem 1.7rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+
+.btn--xl svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* --- phone ergonomics ---------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .theme-toggle__label {
+    display: none;
+  }
+
+  .hero {
+    padding-top: 1.5rem;
+  }
+
+  .hero__actions .btn {
+    width: 100%;
+    padding: 1rem 1.1rem;
+  }
+
+  .book-grid {
+    gap: 1.5rem;
+  }
+
+  .choice {
+    min-height: 44px;
+    padding: 0.65rem 0.85rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .slot {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.2rem;
+  }
+
+  .day {
+    min-height: 66px;
+    scroll-snap-align: start;
+  }
+
+  .day-strip {
+    scroll-snap-type: x mandatory;
+  }
+
+  .input,
+  .search {
+    font-size: 16px;
+    padding: 0.8rem 0.85rem;
+  }
+
+  .field {
+    margin-bottom: 1.3rem;
+  }
+
+  .summary {
+    padding: 1.1rem;
+  }
+
+  .hero__rates {
+    gap: 1.3rem 1.8rem;
   }
 }
