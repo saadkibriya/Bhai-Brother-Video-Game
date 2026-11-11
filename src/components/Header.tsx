@@ -11,6 +11,7 @@ const LINKS = [
   { to: '/pricing', label: 'Rates' },
   { to: '/book', label: 'Book' },
   { to: '/visit', label: 'Visit' },
+  { to: '/admin', label: 'Staff' },
 ];
 
 export function Header() {
