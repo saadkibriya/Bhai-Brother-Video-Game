@@ -11,3 +11,6 @@ artifacts/
 
 # Local admin key used when setting the Sites secret
 .admin-key
+
+# Generated owner login, kept out of git
+.admin-credentials

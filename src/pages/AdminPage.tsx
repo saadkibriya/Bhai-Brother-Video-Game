@@ -1,492 +1,371 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
-import {
-  SESSION_LENGTHS,
-  adminAction,
-  adminVerify,
-  alertsFor,
-  clockLabel,
-  elapsedLabel,
-  fetchState,
-  remainingLabel,
-  statusLabel,
-  type AlertKind,
-  type ShopState,
-  type StationAction,
-  type StationState,
-} from '../lib/stations';
-import { durationLabel } from '../lib/pricing';
+import { useEffect, useState, type FormEvent } from 'react';
+import { SHOP } from '../data/shop';
+import { whatsappUrl } from '../lib/booking';
+import { codeProblem, normalizeCode, passwordProblem, usernameProblem } from '../lib/credentials';
+import { adminApi, type Admin } from '../lib/adminApi';
+import { CounterPanel } from '../components/CounterPanel';
 
-const KEY_STORAGE = 'bb-admin-key';
-
-interface Toast {
-  id: string;
-  kind: AlertKind;
-  title: string;
-  body: string;
-}
-
-const ALERT_TEXT: Record<AlertKind, string> = {
-  ten: '10 minutes left',
-  five: '5 minutes left',
-  end: 'Time is up',
-};
-
-function browserNotify(title: string, body: string) {
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-  try {
-    new Notification(title, { body, tag: `${title}·${body}` });
-  } catch {
-    /* some browsers refuse notifications without a service worker registration */
-  }
-}
+type Screen = 'loading' | 'setup' | 'login' | 'forgot' | 'reset' | 'panel';
 
 export function AdminPage() {
-  const [key, setKey] = useState(() => sessionStorage.getItem(KEY_STORAGE) ?? '');
-  const [draft, setDraft] = useState('');
-  const [unlocked, setUnlocked] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [state, setState] = useState<ShopState | null>(null);
+  const [screen, setScreen] = useState<Screen>('loading');
+  const [admin, setAdmin] = useState<Admin | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [working, setWorking] = useState('');
-  const [now, setNow] = useState(() => Date.now());
-  const [starting, setStarting] = useState<string | null>(null);
-  const [startDraft, setStartDraft] = useState({ player: '', minutes: 60 });
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [ended, setEnded] = useState<StationState | null>(null);
-  const [notifyState, setNotifyState] = useState<string>(() =>
-    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
-  );
 
-  const fired = useRef<Record<string, AlertKind[]>>({});
+  const [login, setLogin] = useState({ username: '', password: '' });
+  const [setup, setSetup] = useState({ username: '', password: '', confirm: '', key: '' });
+  const [forgotName, setForgotName] = useState('');
+  const [reset, setReset] = useState({ username: '', code: '', password: '' });
+  const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       try {
-        setState(await fetchState(key || undefined));
+        const status = await adminApi.setupStatus();
+        setNeedsSetup(status.needsSetup);
+        if (status.needsSetup) {
+          setScreen('setup');
+          return;
+        }
+        const current = await adminApi.me();
+        setAdmin(current.admin);
+        setScreen('panel');
       } catch {
-        /* keep the last known state */
+        setScreen('login');
       }
-    };
+    })();
+  }, []);
 
-    load();
-    const poll = window.setInterval(load, 15_000);
-    const clock = window.setInterval(() => setNow(Date.now()), 1000);
-
-    return () => {
-      window.clearInterval(poll);
-      window.clearInterval(clock);
-    };
-  }, [key]);
-
-  useEffect(() => {
-    if (!key) return;
-    setChecking(true);
-    adminVerify(key)
-      .then(() => setUnlocked(true))
-      .catch(() => setUnlocked(false))
-      .finally(() => setChecking(false));
-    // Only re-check when the stored key changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-
-  // Fire the 10 / 5 / 0 minute alerts once per session, even if the panel was
-  // closed when a threshold passed.
-  useEffect(() => {
-    if (!unlocked || !state) return;
-
-    const fresh: Toast[] = [];
-    for (const station of state.stations) {
-      if (station.status !== 'busy' || !station.endsAt) continue;
-
-      const sessionKey = `${station.id}:${station.startedAt}`;
-      const already = fired.current[sessionKey] ?? [];
-      const due = alertsFor(station.endsAt, now, already);
-      if (due.length === 0) continue;
-
-      fired.current[sessionKey] = [...already, ...due];
-
-      for (const kind of due) {
-        const who = station.player ?? 'Player';
-        const title = `${station.name} · ${who}`;
-        const body =
-          kind === 'end'
-            ? 'Session finished — collect payment and free the station.'
-            : `${ALERT_TEXT[kind]} — ends at ${clockLabel(station.endsAt)}.`;
-
-        fresh.push({ id: `${sessionKey}:${kind}`, kind, title, body });
-        if (kind === 'end') setEnded(station);
-        browserNotify(title, body);
-      }
-    }
-
-    if (fresh.length === 0) return;
-    setToasts((current) => [...fresh, ...current].slice(0, 4));
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => !fresh.some((item) => item.id === toast.id)));
-    }, 15_000);
-  }, [now, state, unlocked]);
-
-  async function enableAlerts() {
-    if (typeof Notification === 'undefined') return;
-    const permission = await Notification.requestPermission();
-    setNotifyState(permission);
-  }
-
-  async function unlock(event: FormEvent<HTMLFormElement>) {
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setWorking('login');
     try {
-      await adminVerify(draft.trim());
-      sessionStorage.setItem(KEY_STORAGE, draft.trim());
-      setKey(draft.trim());
-      setUnlocked(true);
-      setDraft('');
+      const result = await adminApi.login(login.username, login.password);
+      setAdmin(result.admin);
+      setLogin({ username: '', password: '' });
+      setScreen('panel');
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'That key did not work.');
-    }
-  }
-
-  async function run(
-    station: StationState,
-    action: StationAction,
-    details: { player?: string; minutes?: number } = {}
-  ) {
-    setWorking(`${station.id}:${action}`);
-    setError('');
-    try {
-      const next = await adminAction(key, station.id, action, details);
-      setState(next);
-      if (action === 'stop') {
-        delete fired.current[`${station.id}:${station.startedAt}`];
-        setEnded(null);
-      }
-      if (action === 'start') setStarting(null);
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'Could not update the station.');
+      setError(problem instanceof Error ? problem.message : 'Could not sign in.');
     } finally {
       setWorking('');
     }
   }
 
-  function startSession(event: FormEvent<HTMLFormElement>, station: StationState) {
+  async function runSetup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const player = startDraft.player.trim();
-    if (!player) {
-      setError('Add the player name before starting.');
-      return;
+    setError('');
+    const nameIssue = usernameProblem(setup.username);
+    if (nameIssue) return setError(nameIssue);
+    const passwordIssue = passwordProblem(setup.password);
+    if (passwordIssue) return setError(passwordIssue);
+    if (setup.password !== setup.confirm) return setError('The two passwords do not match.');
+    if (!setup.key) return setError('Paste the setup key from the site owner.');
+
+    setWorking('setup');
+    try {
+      await adminApi.setup(setup.username, setup.password, setup.key);
+      setNeedsSetup(false);
+      setScreen('login');
+      setNotice('Main admin created. Sign in with that username and password.');
+      setSetup({ username: '', password: '', confirm: '', key: '' });
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : 'Could not finish setup.');
+    } finally {
+      setWorking('');
     }
-    run(station, 'start', { player, minutes: startDraft.minutes });
-    setStartDraft({ player: '', minutes: 60 });
   }
 
-  function lock() {
-    sessionStorage.removeItem(KEY_STORAGE);
-    setKey('');
-    setUnlocked(false);
+  async function requestReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    const nameIssue = usernameProblem(forgotName);
+    if (nameIssue) return setError(nameIssue);
+    setWorking('forgot');
+    try {
+      await adminApi.forgot(forgotName.trim().toLowerCase());
+      setReset((current) => ({ ...current, username: forgotName.trim().toLowerCase() }));
+      setScreen('reset');
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : 'Could not send the request.');
+    } finally {
+      setWorking('');
+    }
   }
 
-  const busy = state?.stations.filter((station) => station.status === 'busy') ?? [];
+  async function submitReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    const codeIssue = codeProblem(reset.code);
+    if (codeIssue) return setError(codeIssue);
+    const passwordIssue = passwordProblem(reset.password);
+    if (passwordIssue) return setError(passwordIssue);
+
+    setWorking('reset');
+    try {
+      await adminApi.reset(reset.username, reset.code, reset.password);
+      setScreen('login');
+      setLogin({ username: reset.username, password: '' });
+      setNotice('Password changed. Sign in with the new one.');
+      setReset({ username: '', code: '', password: '' });
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : 'Could not reset the password.');
+    } finally {
+      setWorking('');
+    }
+  }
+
+  const backToLogin = () => {
+    setError('');
+    setScreen('login');
+  };
+
+  if (screen === 'panel' && admin) {
+    return (
+      <CounterPanel
+        admin={admin}
+        onSignOut={() => {
+          setAdmin(null);
+          setScreen('login');
+          setNotice('Signed out.');
+        }}
+      />
+    );
+  }
 
   return (
     <>
       <section className="band band--ink page-head">
         <div className="wrap">
           <p className="eyebrow">Staff</p>
-          <h1>Counter panel</h1>
+          <h1>{needsSetup ? 'Set up the counter' : 'Admin sign in'}</h1>
           <p className="lede">
-            Log who is playing, when they started and when the session ends. Start a timer to begin,
-            end it to save the length, and block a station when it is out of service.
+            {needsSetup
+              ? 'No admin exists yet. Create the main admin account with the setup key, then add the counter team.'
+              : 'Sign in to time sessions, log players and manage the station board. The panel is for staff only.'}
           </p>
         </div>
       </section>
 
       <section className="band band--ink-2">
-        <div className="wrap">
-          {!unlocked ? (
-            <form className="admin-lock" onSubmit={unlock}>
-              <p className="field__label">Admin key</p>
-              <div className="admin-lock__row">
-                <input
-                  className="input"
-                  type="password"
-                  value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Enter the shop key"
-                  autoComplete="current-password"
-                  aria-label="Admin key"
-                />
-                <button className="btn btn--flame" type="submit" disabled={draft.trim().length < 4}>
-                  Unlock
+        <div className="wrap auth">
+          <div className="auth-card">
+            {screen === 'loading' && <p className="summary__note">Checking your session…</p>}
+
+            {notice && screen !== 'panel' && (
+              <p className="banner banner--ok" role="status">
+                {notice}
+              </p>
+            )}
+            {error && (
+              <p className="error" role="alert">
+                {error}
+              </p>
+            )}
+
+            {screen === 'setup' && (
+              <form className="auth-form" onSubmit={runSetup} noValidate>
+                <label className="field">
+                  <span className="field__label">Username</span>
+                  <input
+                    className="input"
+                    value={setup.username}
+                    onChange={(event) => setSetup((current) => ({ ...current, username: event.target.value }))}
+                    placeholder="owner"
+                    autoCapitalize="none"
+                    autoComplete="username"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field__label">Password</span>
+                  <input
+                    className="input"
+                    type="password"
+                    value={setup.password}
+                    onChange={(event) => setSetup((current) => ({ ...current, password: event.target.value }))}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field__label">Repeat password</span>
+                  <input
+                    className="input"
+                    type="password"
+                    value={setup.confirm}
+                    onChange={(event) => setSetup((current) => ({ ...current, confirm: event.target.value }))}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <label className="field">
+                  <span className="field__label">Setup key</span>
+                  <input
+                    className="input"
+                    type="password"
+                    value={setup.key}
+                    onChange={(event) => setSetup((current) => ({ ...current, key: event.target.value }))}
+                    placeholder="ADMIN_KEY from Sites → Secrets"
+                  />
+                </label>
+                <p className="summary__note">
+                  The setup key is the <code>ADMIN_KEY</code> secret, stored in <code>.admin-key</code>{' '}
+                  in the project. It is only needed once.
+                </p>
+                <button className="btn btn--flame" type="submit" disabled={working === 'setup'}>
+                  {working === 'setup' ? 'Creating…' : 'Create main admin'}
                 </button>
-              </div>
-              {error && (
-                <p className="error" role="alert">
-                  {error}
-                </p>
-              )}
-              <p className="summary__note">
-                {checking
-                  ? 'Checking the saved key…'
-                  : state && !state.adminConfigured
-                    ? 'No admin key is set on the server yet. Add ADMIN_KEY in Sites → Secrets, then reload.'
-                    : 'The key is kept in this browser tab only. Ask the site owner if you do not have it.'}
-              </p>
-            </form>
-          ) : (
-            <>
-              <div className="admin-bar">
-                <div>
-                  <p className="eyebrow">Today</p>
-                  <p className="admin-bar__stat">
-                    {state?.sessionsToday ?? 0} sessions · {state?.minutesToday ?? 0} min ·{' '}
-                    {busy.length} playing
-                  </p>
-                </div>
-                <div className="admin-bar__actions">
-                  {notifyState === 'default' && (
-                    <button className="btn btn--ghost" type="button" onClick={enableAlerts}>
-                      Enable alerts
-                    </button>
-                  )}
-                  <button className="btn btn--ghost" type="button" onClick={lock}>
-                    Lock panel
+              </form>
+            )}
+
+            {screen === 'login' && (
+              <>
+                <form className="auth-form" onSubmit={signIn} noValidate>
+                  <label className="field">
+                    <span className="field__label">Username</span>
+                    <input
+                      className="input"
+                      value={login.username}
+                      onChange={(event) => setLogin((current) => ({ ...current, username: event.target.value }))}
+                      autoCapitalize="none"
+                      autoComplete="username"
+                      placeholder="owner"
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="field__label">Password</span>
+                    <input
+                      className="input"
+                      type="password"
+                      value={login.password}
+                      onChange={(event) => setLogin((current) => ({ ...current, password: event.target.value }))}
+                      autoComplete="current-password"
+                    />
+                  </label>
+                  <button className="btn btn--flame" type="submit" disabled={working === 'login'}>
+                    {working === 'login' ? 'Signing in…' : 'Sign in'}
                   </button>
-                </div>
-              </div>
-
-              <p className="admin-hint">
-                Keep this panel open on the counter phone or tablet. It warns you 10 minutes and 5
-                minutes before a session ends, then pops up when the time is up.
-                {notifyState === 'denied' && ' Browser notifications are blocked, so the alerts only show here.'}
-                {notifyState === 'granted' && ' Browser notifications are on.'}
-              </p>
-
-              {error && (
-                <p className="error" role="alert">
-                  {error}
+                </form>
+                <p className="summary__note">
+                  Forgot it?{' '}
+                  <button
+                    className="link-underline"
+                    type="button"
+                    onClick={() => {
+                      setError('');
+                      setScreen('forgot');
+                    }}
+                  >
+                    Reset with WhatsApp
+                  </button>{' '}
+                  · or call the counter on{' '}
+                  <a className="link-underline" href={`tel:${SHOP.tel}`}>
+                    {SHOP.phone}
+                  </a>
+                  .
                 </p>
-              )}
+              </>
+            )}
 
-              <div className="board board--admin">
-                {(state?.stations ?? []).map((station) => {
-                  const running = station.status === 'busy' && station.startedAt;
-                  return (
-                    <article className="station station--admin" data-status={station.status} key={station.id}>
-                      <div>
-                        <p className="station__platform">{station.platform}</p>
-                        <h3>{station.name}</h3>
-                        <p className="station__status">
-                          <span className="station__dot" aria-hidden="true" />
-                          {statusLabel(station.status)}
-                        </p>
-                        {station.player && <p className="station__player">{station.player}</p>}
-                        {running && station.startedAt && (
-                          <p className="station__meta">
-                            Started {clockLabel(station.startedAt)}
-                            {station.endsAt ? ` · ends ${clockLabel(station.endsAt)}` : ''}
-                          </p>
-                        )}
-                      </div>
+            {screen === 'forgot' && (
+              <>
+                <form className="auth-form" onSubmit={requestReset} noValidate>
+                  <p className="summary__note">
+                    Enter your username. The main admin gets the request on WhatsApp, checks it is
+                    really you, and sends back a 6-digit code.
+                  </p>
+                  <label className="field">
+                    <span className="field__label">Username</span>
+                    <input
+                      className="input"
+                      value={forgotName}
+                      onChange={(event) => setForgotName(event.target.value)}
+                      autoCapitalize="none"
+                      placeholder="nadia"
+                    />
+                  </label>
+                  <button className="btn btn--flame" type="submit" disabled={working === 'forgot'}>
+                    {working === 'forgot' ? 'Sending…' : 'Request a reset code'}
+                  </button>
+                </form>
+                <button className="link-underline auth__back" type="button" onClick={backToLogin}>
+                  Back to sign in
+                </button>
+              </>
+            )}
 
-                      <p className="station__timer">
-                        {running && station.startedAt
-                          ? elapsedLabel(station.startedAt, now)
-                          : '--:--'}
-                      </p>
+            {screen === 'reset' && (
+              <>
+                <div className="banner banner--ok">
+                  Request sent for <strong>{reset.username}</strong>.
+                </div>
+                <a
+                  className="btn btn--ghost"
+                  href={whatsappUrl(
+                    `Password reset request for the counter panel.\nUsername: ${reset.username}\nPlease verify it is me and send the 6-digit code.`
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Message the counter on WhatsApp
+                </a>
+                <form className="auth-form" onSubmit={submitReset} noValidate>
+                  <label className="field">
+                    <span className="field__label">6-digit code</span>
+                    <input
+                      className="input"
+                      value={reset.code}
+                      onChange={(event) =>
+                        setReset((current) => ({ ...current, code: normalizeCode(event.target.value) }))
+                      }
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="123456"
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="field__label">New password</span>
+                    <input
+                      className="input"
+                      type="password"
+                      value={reset.password}
+                      onChange={(event) => setReset((current) => ({ ...current, password: event.target.value }))}
+                      autoComplete="new-password"
+                    />
+                  </label>
+                  <button className="btn btn--flame" type="submit" disabled={working === 'reset'}>
+                    {working === 'reset' ? 'Saving…' : 'Set new password'}
+                  </button>
+                </form>
+                <p className="summary__note">
+                  Codes expire after 30 minutes and work once. If it has expired, ask the main admin
+                  for a new one.
+                </p>
+                <button className="link-underline auth__back" type="button" onClick={backToLogin}>
+                  Back to sign in
+                </button>
+              </>
+            )}
+          </div>
 
-                      {station.status === 'busy' && station.endsAt && (
-                        <p
-                          className="station__remaining"
-                          data-late={station.endsAt - now <= 5 * 60_000}
-                        >
-                          {remainingLabel(station.endsAt, now)}
-                        </p>
-                      )}
-
-                      <div className="station__actions">
-                        {station.status === 'busy' ? (
-                          <button
-                            className="btn btn--flame"
-                            type="button"
-                            disabled={working === `${station.id}:stop`}
-                            onClick={() => run(station, 'stop')}
-                          >
-                            End session
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn--flame"
-                            type="button"
-                            disabled={
-                              station.status === 'blocked' || working === `${station.id}:start`
-                            }
-                            onClick={() => {
-                              setStarting(station.id);
-                              setStartDraft({ player: '', minutes: 60 });
-                              setError('');
-                            }}
-                          >
-                            Start session
-                          </button>
-                        )}
-
-                        {station.status === 'blocked' ? (
-                          <button
-                            className="btn btn--ghost"
-                            type="button"
-                            disabled={working === `${station.id}:unblock`}
-                            onClick={() => run(station, 'unblock')}
-                          >
-                            Unblock
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn--ghost"
-                            type="button"
-                            disabled={working === `${station.id}:block`}
-                            onClick={() => run(station, 'block')}
-                          >
-                            Block
-                          </button>
-                        )}
-                      </div>
-
-                      {starting === station.id && station.status !== 'busy' && (
-                        <form className="start-form" onSubmit={(event) => startSession(event, station)}>
-                          <label className="start-form__name">
-                            <span className="field__label">Player</span>
-                            <input
-                              className="input"
-                              value={startDraft.player}
-                              onChange={(event) =>
-                                setStartDraft((current) => ({ ...current, player: event.target.value }))
-                              }
-                              placeholder="Who is playing?"
-                              autoFocus
-                              maxLength={60}
-                              aria-label={`Player name for ${station.name}`}
-                            />
-                          </label>
-
-                          <div className="start-form__length">
-                            <span className="field__label">Session length</span>
-                            <div className="choice-row choice-row--tight">
-                              {SESSION_LENGTHS.map((minutes) => (
-                                <button
-                                  key={minutes}
-                                  type="button"
-                                  className="choice"
-                                  aria-pressed={startDraft.minutes === minutes}
-                                  onClick={() =>
-                                    setStartDraft((current) => ({ ...current, minutes }))
-                                  }
-                                >
-                                  {durationLabel(minutes)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="start-form__actions">
-                            <button
-                              className="btn btn--flame"
-                              type="submit"
-                              disabled={!startDraft.player.trim() || working === `${station.id}:start`}
-                            >
-                              Start
-                            </button>
-                            <button
-                              className="btn btn--ghost"
-                              type="button"
-                              onClick={() => setStarting(null)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-
-              <div className="admin-log">
-                <p className="eyebrow">Recent sessions</p>
-                {(state?.recentSessions.length ?? 0) === 0 ? (
-                  <p className="summary__note">No sessions saved yet. End a timer to record one.</p>
-                ) : (
-                  <table className="pass-table pass-table--dark">
-                    <thead>
-                      <tr>
-                        <th scope="col">Player</th>
-                        <th scope="col">Station</th>
-                        <th scope="col">Ended</th>
-                        <th scope="col">Played</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state?.recentSessions.map((session) => (
-                        <tr key={`${session.stationId}-${session.endedAt}`}>
-                          <td>{session.player ?? '—'}</td>
-                          <td>
-                            {state.stations.find((station) => station.id === session.stationId)?.name ??
-                              session.stationId}
-                          </td>
-                          <td>
-                            {new Date(session.endedAt).toLocaleTimeString('en-GB', {
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              timeZone: 'Asia/Dhaka',
-                            })}
-                          </td>
-                          <td>{session.minutes} min</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </>
-          )}
+          <aside className="auth-side">
+            <p className="eyebrow">Staff only</p>
+            <p>
+              Accounts are per person so the owner can see who started a session and can remove
+              access when someone leaves. Passwords are stored hashed — nobody, including the owner,
+              can read them.
+            </p>
+            <p>
+              Forgot a password? The main admin issues a one-time code from the panel, after
+              verifying you on WhatsApp.
+            </p>
+            <p className="summary__note">
+              No admin account yet? Ask the owner. This is the counter panel for{' '}
+              {SHOP.fullName}.
+            </p>
+          </aside>
         </div>
       </section>
-
-      {toasts.length > 0 && (
-        <div className="toasts" role="status" aria-live="polite">
-          {toasts.map((toast) => (
-            <div className="toast" data-kind={toast.kind} key={toast.id}>
-              <strong>{toast.title}</strong>
-              <span>{toast.body}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {ended && (
-        <div className="alert-overlay" role="dialog" aria-modal="true" aria-label="Session finished">
-          <div className="alert-card">
-            <p className="eyebrow">Time is up</p>
-            <h2>{ended.player ?? 'Player'} on {ended.name}</h2>
-            <p>
-              The session has finished. Collect the payment, then end the timer to log how long they
-              played.
-            </p>
-            <div className="alert-card__actions">
-              <button
-                className="btn btn--flame"
-                type="button"
-                disabled={working === `${ended.id}:stop`}
-                onClick={() => run(ended, 'stop')}
-              >
-                End session
-              </button>
-              <button className="btn btn--ghost" type="button" onClick={() => setEnded(null)}>
-                Still playing
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

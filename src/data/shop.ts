@@ -143,6 +143,14 @@ export const FAQS = [
     a: 'Cash, bKash or Nagad at the counter, after your session. Bookings are not prepaid.',
   },
   {
+    q: 'Can we book for a birthday or a whole squad?',
+    a: 'Yes. Message the counter on WhatsApp with the date, time and how many people, and we will hold the stations together. For groups of six or more, give us a day so we can block the floor.',
+  },
+  {
+    q: 'Can I come alone?',
+    a: 'Absolutely. Solo players are welcome — take a pad, take the couch, and we can match you with someone waiting for a match. The hourly rate is per person.',
+  },
+  {
     q: 'Can we bring food or smoke?',
     a: 'Outside food is fine if you keep it off the console tables. Smoking and vaping are not allowed inside.',
   },

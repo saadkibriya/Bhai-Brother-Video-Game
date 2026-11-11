@@ -5,12 +5,141 @@ const STATION_SEED = [
 ];
 
 const DHAKA_OFFSET = 6 * 60 * 60 * 1000;
+const COOKIE = 'bb_admin';
+const SESSION_MS = 12 * 60 * 60 * 1000;
+const RESET_MS = 30 * 60 * 1000;
+const MAX_FAILS = 8;
+const LOCK_MS = 15 * 60 * 1000;
+const ITERATIONS = 60_000;
+
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'cache-control': 'no-store',
 };
 
-const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+const json = (body, status = 200, extra = {}) =>
+  new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...extra } });
+
+const enc = new TextEncoder();
+
+function b64url(bytes) {
+  let binary = '';
+  for (const byte of new Uint8Array(bytes)) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function unb64url(text) {
+  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+async function sha256Hex(text) {
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(text));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function same(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string' || left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return diff === 0;
+}
+
+async function hashPassword(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: ITERATIONS, hash: 'SHA-256' },
+    key,
+    256
+  );
+  return `pbkdf2$${ITERATIONS}$${b64url(salt)}$${b64url(bits)}`;
+}
+
+async function passwordMatches(password, stored) {
+  const parts = String(stored || '').split('$');
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false;
+  const iterations = Number(parts[1]);
+  if (!Number.isFinite(iterations) || iterations < 1000) return false;
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: unb64url(parts[2]), iterations, hash: 'SHA-256' },
+    key,
+    256
+  );
+  return same(b64url(bits), parts[3]);
+}
+
+function readCookie(request, name) {
+  const raw = request.headers.get('cookie') || '';
+  for (const part of raw.split(';')) {
+    const [key, ...rest] = part.trim().split('=');
+    if (key === name) return rest.join('=');
+  }
+  return null;
+}
+
+const cookieHeader = (token, maxAgeSeconds) =>
+  `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAgeSeconds}`;
+
+const clearedCookie = () => `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+
+const cleanUsername = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+function usernameProblem(name) {
+  if (!name) return 'Pick a username.';
+  if (!/^[a-z0-9._-]{3,24}$/.test(name)) {
+    return 'Usernames are 3–24 characters: letters, numbers, dot, dash or underscore.';
+  }
+  return null;
+}
+
+function passwordProblem(password) {
+  if (typeof password !== 'string' || password.length < 8) return 'Passwords need at least 8 characters.';
+  if (password.length > 200) return 'That password is too long.';
+  return null;
+}
+
+function tempPassword() {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  return [...crypto.getRandomValues(new Uint8Array(10))]
+    .map((byte) => alphabet[byte % alphabet.length])
+    .join('');
+}
+
+function sixDigitCode() {
+  return String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+}
+
+const publicAdmin = (row) => ({
+  id: row.id,
+  username: row.username,
+  displayName: row.display_name,
+  role: row.role,
+  mustChange: Boolean(row.must_change),
+});
+
+const publicMember = (row) => ({
+  ...publicAdmin(row),
+  disabled: Boolean(row.disabled),
+  createdAt: row.created_at,
+  lastLoginAt: row.last_login_at,
+  passwordChangedAt: row.password_changed_at,
+});
+
+async function readJson(request) {
+  return request.json().catch(() => null);
+}
+
+async function audit(env, adminId, action, detail) {
+  await env.DB.prepare('INSERT INTO audit_log (admin_id, action, detail, created_at) VALUES (?, ?, ?, ?)')
+    .bind(adminId ?? null, action, detail ?? null, Date.now())
+    .run();
+}
 
 async function ensureColumn(env, table, column, definition) {
   const info = await env.DB.prepare(`PRAGMA table_info(${table})`).all();
@@ -48,9 +177,53 @@ async function ensureSchema(env) {
         minutes INTEGER NOT NULL
       )`
     ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS admins (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        display_name TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'admin',
+        password_hash TEXT NOT NULL,
+        must_change INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        created_by TEXT,
+        disabled INTEGER NOT NULL DEFAULT 0,
+        failed_attempts INTEGER NOT NULL DEFAULT 0,
+        locked_until INTEGER,
+        last_login_at INTEGER,
+        password_changed_at INTEGER
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS admin_sessions (
+        token_hash TEXT PRIMARY KEY,
+        admin_id INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS reset_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        code_hash TEXT,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        used_at INTEGER,
+        issued_by TEXT
+      )`
+    ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER,
+        action TEXT NOT NULL,
+        detail TEXT,
+        created_at INTEGER NOT NULL
+      )`
+    ),
   ]);
 
-  // Older databases predate the player log; add the columns in place.
   await ensureColumn(env, 'stations', 'player', 'TEXT');
   await ensureColumn(env, 'stations', 'ends_at', 'INTEGER');
   await ensureColumn(env, 'stations', 'minutes', 'INTEGER');
@@ -70,19 +243,7 @@ async function ensureSchema(env) {
   }
 }
 
-function authorized(request, env) {
-  const provided = request.headers.get('x-admin-key') || '';
-  const expected = env.ADMIN_KEY || '';
-  if (!provided || !expected || provided.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i += 1) {
-    diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-const dhakaDayStart = (now) =>
-  Math.floor((now + DHAKA_OFFSET) / 86400000) * 86400000 - DHAKA_OFFSET;
+const dhakaDayStart = (now) => Math.floor((now + DHAKA_OFFSET) / 86400000) * 86400000 - DHAKA_OFFSET;
 
 async function readState(env, includePlayer = false) {
   const now = Date.now();
@@ -100,7 +261,7 @@ async function readState(env, includePlayer = false) {
 
   return {
     now,
-    adminConfigured: Boolean(env.ADMIN_KEY),
+    adminConfigured: true,
     sessionsToday: today?.total ?? 0,
     minutesToday: today?.minutes ?? 0,
     stations: (stations.results ?? []).map((row) => ({
@@ -117,7 +278,7 @@ async function readState(env, includePlayer = false) {
     })),
     recentSessions: (sessions.results ?? []).map((row) => ({
       stationId: row.station_id,
-      player: row.player,
+      player: includePlayer ? row.player : null,
       plannedMinutes: row.planned_minutes,
       startedAt: row.started_at,
       endedAt: row.ended_at,
@@ -126,29 +287,110 @@ async function readState(env, includePlayer = false) {
   };
 }
 
-async function setStation(env, body) {
+async function currentAdmin(request, env) {
+  const token = readCookie(request, COOKIE);
+  if (!token) return null;
+  const tokenHash = await sha256Hex(token);
+  const row = await env.DB.prepare(
+    `SELECT a.id, a.username, a.display_name, a.role, a.must_change, a.disabled, s.expires_at
+     FROM admin_sessions s JOIN admins a ON a.id = s.admin_id
+     WHERE s.token_hash = ?`
+  )
+    .bind(tokenHash)
+    .first();
+
+  if (!row) return null;
+  if (row.expires_at < Date.now() || row.disabled) {
+    await env.DB.prepare('DELETE FROM admin_sessions WHERE token_hash = ?').bind(tokenHash).run();
+    return null;
+  }
+  return {
+    id: row.id,
+    username: row.username,
+    display_name: row.display_name,
+    role: row.role,
+    must_change: row.must_change,
+  };
+}
+
+async function startSession(env, admin) {
+  const token = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO admin_sessions (token_hash, admin_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
+      .bind(await sha256Hex(token), admin.id, now, now + SESSION_MS),
+    env.DB.prepare('DELETE FROM admin_sessions WHERE expires_at < ?').bind(now),
+  ]);
+  return token;
+}
+
+async function login(env, request) {
+  const body = await readJson(request);
+  const username = cleanUsername(body?.username);
+  const password = typeof body?.password === 'string' ? body.password : '';
+  const admin = await env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+  const now = Date.now();
+
+  if (!admin) {
+    await hashPassword(`missing-${username}`);
+    return json({ error: 'Wrong username or password.' }, 401);
+  }
+  if (admin.locked_until && admin.locked_until > now) {
+    const minutes = Math.ceil((admin.locked_until - now) / 60000);
+    return json({ error: `Too many attempts. Try again in ${minutes} min.` }, 429);
+  }
+  if (admin.disabled) {
+    return json({ error: 'This account is disabled. Ask the main admin.' }, 403);
+  }
+
+  const ok = await passwordMatches(password, admin.password_hash);
+  if (!ok) {
+    const fails = admin.failed_attempts + 1;
+    const lock = fails >= MAX_FAILS;
+    await env.DB.prepare('UPDATE admins SET failed_attempts = ?, locked_until = ? WHERE id = ?')
+      .bind(lock ? 0 : fails, lock ? now + LOCK_MS : null, admin.id)
+      .run();
+    return json(
+      { error: lock ? 'Too many attempts. Locked for 15 minutes.' : 'Wrong username or password.' },
+      lock ? 429 : 401
+    );
+  }
+
+  const token = await startSession(env, admin);
+  await env.DB.prepare(
+    'UPDATE admins SET failed_attempts = 0, locked_until = NULL, last_login_at = ? WHERE id = ?'
+  )
+    .bind(now, admin.id)
+    .run();
+  await audit(env, admin.id, 'login', admin.username);
+
+  return json({ admin: publicAdmin(admin) }, 200, { 'set-cookie': cookieHeader(token, SESSION_MS / 1000) });
+}
+
+async function stationAction(env, admin, request) {
+  const body = await readJson(request);
   const id = typeof body?.id === 'string' ? body.id : '';
   const action = typeof body?.action === 'string' ? body.action : '';
   const station = await env.DB.prepare('SELECT * FROM stations WHERE id = ?').bind(id).first();
 
-  if (!station) return { error: 'Unknown station', status: 404 };
+  if (!station) return json({ error: 'Unknown station' }, 404);
   if (!['start', 'stop', 'block', 'unblock'].includes(action)) {
-    return { error: 'Unknown action', status: 400 };
+    return json({ error: 'Unknown action' }, 400);
   }
 
   const now = Date.now();
 
   if (action === 'start') {
-    if (station.status === 'blocked') return { error: 'This station is blocked', status: 409 };
+    if (station.status === 'blocked') return json({ error: 'This station is blocked' }, 409);
     if (station.status === 'busy' && station.started_at) {
-      return { error: 'That station is already running a session', status: 409 };
+      return json({ error: 'That station is already running a session' }, 409);
     }
 
     const player = typeof body?.player === 'string' ? body.player.trim().slice(0, 60) : '';
     const minutes = Number(body?.minutes);
-    if (!player) return { error: 'Add the player name before starting', status: 400 };
+    if (!player) return json({ error: 'Add the player name before starting' }, 400);
     if (!Number.isFinite(minutes) || minutes < 30 || minutes > 300) {
-      return { error: 'Session length must be between 30 and 300 minutes', status: 400 };
+      return json({ error: 'Session length must be between 30 and 300 minutes' }, 400);
     }
 
     await env.DB.prepare(
@@ -156,6 +398,7 @@ async function setStation(env, body) {
     )
       .bind(now, now + minutes * 60000, minutes, player, now, id)
       .run();
+    await audit(env, admin.id, 'session.start', `${player} on ${station.name} for ${minutes} min`);
   }
 
   if (action === 'stop') {
@@ -169,6 +412,7 @@ async function setStation(env, body) {
           "UPDATE stations SET status = 'free', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?"
         ).bind(now, id),
       ]);
+      await audit(env, admin.id, 'session.stop', `${station.player ?? 'player'} on ${station.name}: ${minutes} min`);
     } else {
       await env.DB.prepare(
         "UPDATE stations SET status = 'free', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?"
@@ -178,23 +422,89 @@ async function setStation(env, body) {
     }
   }
 
-  if (action === 'block') {
+  if (action === 'block' || action === 'unblock') {
+    const status = action === 'block' ? 'blocked' : 'free';
     await env.DB.prepare(
-      "UPDATE stations SET status = 'blocked', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?"
+      'UPDATE stations SET status = ?, started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?'
     )
-      .bind(now, id)
+      .bind(status, now, id)
       .run();
+    await audit(env, admin.id, `station.${action}`, station.name);
   }
 
-  if (action === 'unblock') {
+  return json(await readState(env, true));
+}
+
+async function teamList(env) {
+  const admins = await env.DB.prepare(
+    'SELECT id, username, display_name, role, disabled, must_change, created_at, created_by, last_login_at, password_changed_at FROM admins ORDER BY role DESC, username'
+  ).all();
+  const pending = await env.DB.prepare(
+    `SELECT r.id, r.admin_id, r.created_at, r.expires_at, r.code_hash, a.username
+     FROM reset_requests r JOIN admins a ON a.id = r.admin_id
+     WHERE r.used_at IS NULL AND r.expires_at > ?
+     ORDER BY r.created_at DESC LIMIT 20`
+  )
+    .bind(Date.now())
+    .all();
+
+  return {
+    admins: (admins.results ?? []).map(publicMember),
+    pendingResets: (pending.results ?? []).map((row) => ({
+      id: row.id,
+      adminId: row.admin_id,
+      username: row.username,
+      createdAt: row.created_at,
+      expiresAt: row.expires_at,
+      issued: Boolean(row.code_hash),
+    })),
+  };
+}
+
+async function createAdmin(env, owner, request) {
+  const body = await readJson(request);
+  const username = cleanUsername(body?.username);
+  const displayName = typeof body?.displayName === 'string' ? body.displayName.trim().slice(0, 40) : '';
+  const role = body?.role === 'owner' ? 'owner' : 'admin';
+  const provided = typeof body?.password === 'string' && body.password ? body.password : null;
+  const password = provided ?? tempPassword();
+
+  const nameProblem = usernameProblem(username);
+  if (nameProblem) return json({ error: nameProblem }, 400);
+  const passwordIssue = passwordProblem(password);
+  if (passwordIssue) return json({ error: passwordIssue }, 400);
+
+  const now = Date.now();
+  try {
     await env.DB.prepare(
-      "UPDATE stations SET status = 'free', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?"
+      `INSERT INTO admins (username, display_name, role, password_hash, must_change, created_at, created_by)
+       VALUES (?, ?, ?, ?, 1, ?, ?)`
     )
-      .bind(now, id)
+      .bind(username, displayName || username, role, await hashPassword(password), now, owner.username)
       .run();
+  } catch (error) {
+    return json({ error: 'That username is already taken.' }, 409);
   }
 
-  return { error: null, status: 200 };
+  await audit(env, owner.id, 'admin.create', `${username} (${role})`);
+  const created = await env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+  return json({ admin: publicMember(created), tempPassword: password });
+}
+
+async function issueResetCode(env, owner, adminId) {
+  const target = await env.DB.prepare('SELECT * FROM admins WHERE id = ?').bind(adminId).first();
+  if (!target) return json({ error: 'No such admin' }, 404);
+
+  const code = sixDigitCode();
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE reset_requests SET used_at = ? WHERE admin_id = ? AND used_at IS NULL').bind(now, adminId),
+    env.DB.prepare(
+      'INSERT INTO reset_requests (admin_id, code_hash, created_at, expires_at, issued_by) VALUES (?, ?, ?, ?, ?)'
+    ).bind(adminId, await sha256Hex(code), now, now + RESET_MS, owner.username),
+  ]);
+  await audit(env, owner.id, 'admin.reset-code', target.username);
+  return json({ code, expiresAt: now + RESET_MS });
 }
 
 export default {
@@ -206,25 +516,238 @@ export default {
     try {
       await ensureSchema(env);
 
-      if (url.pathname === '/api/status' && request.method === 'GET') {
-        // Player names stay admin-only; the public board gets status and timers.
-        return json(await readState(env, authorized(request, env)));
+      const admin = await currentAdmin(request, env);
+      const method = request.method;
+
+      if (method === 'POST') {
+        const origin = request.headers.get('origin');
+        if (origin && origin !== url.origin) return json({ error: 'Cross-site request refused' }, 403);
       }
 
-      if (url.pathname === '/api/admin/verify' && request.method === 'POST') {
-        return authorized(request, env)
-          ? new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } })
-          : json({ error: 'Wrong admin key' }, 401);
+      if (url.pathname === '/api/status' && method === 'GET') {
+        return json(await readState(env, Boolean(admin)));
       }
 
-      if (url.pathname === '/api/station' && request.method === 'POST') {
-        if (!env.ADMIN_KEY) return json({ error: 'No admin key is configured on the server' }, 503);
-        if (!authorized(request, env)) return json({ error: 'Wrong admin key' }, 401);
+      if (url.pathname === '/api/auth/setup' && method === 'GET') {
+        const total = await env.DB.prepare('SELECT COUNT(*) AS total FROM admins').first('total');
+        return json({ needsSetup: !total, keyConfigured: Boolean(env.ADMIN_KEY) });
+      }
 
-        const body = await request.json().catch(() => null);
-        const result = await setStation(env, body);
-        if (result.error) return json({ error: result.error }, result.status);
-        return json(await readState(env, true));
+      if (url.pathname === '/api/auth/setup' && method === 'POST') {
+        const total = await env.DB.prepare('SELECT COUNT(*) AS total FROM admins').first('total');
+        if (total) return json({ error: 'Setup is already done — sign in instead.' }, 409);
+
+        const key = request.headers.get('x-admin-key') || '';
+        if (!env.ADMIN_KEY || !same(key, env.ADMIN_KEY)) {
+          return json({ error: 'Wrong setup key. It is the ADMIN_KEY secret for this site.' }, 401);
+        }
+
+        const body = await readJson(request);
+        const username = cleanUsername(body?.username);
+        const password = typeof body?.password === 'string' ? body.password : '';
+        const nameProblem = usernameProblem(username);
+        if (nameProblem) return json({ error: nameProblem }, 400);
+        const passwordIssue = passwordProblem(password);
+        if (passwordIssue) return json({ error: passwordIssue }, 400);
+
+        const now = Date.now();
+        await env.DB.prepare(
+          `INSERT INTO admins (username, display_name, role, password_hash, must_change, created_at, created_by)
+           VALUES (?, ?, 'owner', ?, 0, ?, 'setup')`
+        )
+          .bind(username, username, await hashPassword(password), now)
+          .run();
+        await audit(env, null, 'admin.setup', username);
+        return json({ ok: true }, 201);
+      }
+
+      if (url.pathname === '/api/auth/login' && method === 'POST') {
+        return login(env, request);
+      }
+
+      if (url.pathname === '/api/auth/recover' && method === 'POST') {
+        const key = request.headers.get('x-admin-key') || '';
+        if (!env.ADMIN_KEY || !same(key, env.ADMIN_KEY)) return json({ error: 'Wrong recovery key' }, 401);
+
+        const body = await readJson(request);
+        const username = cleanUsername(body?.username);
+        const password = typeof body?.password === 'string' ? body.password : '';
+        const target = await env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+        if (!target) return json({ error: 'No such admin' }, 404);
+        const passwordIssue = passwordProblem(password);
+        if (passwordIssue) return json({ error: passwordIssue }, 400);
+
+        await env.DB.batch([
+          env.DB.prepare(
+            'UPDATE admins SET password_hash = ?, must_change = 0, disabled = 0, failed_attempts = 0, locked_until = NULL, password_changed_at = ? WHERE id = ?'
+          ).bind(await hashPassword(password), Date.now(), target.id),
+          env.DB.prepare('DELETE FROM admin_sessions WHERE admin_id = ?').bind(target.id),
+        ]);
+        await audit(env, null, 'admin.recover', username);
+        return json({ ok: true });
+      }
+
+      if (url.pathname === '/api/auth/me' && method === 'GET') {
+        if (!admin) return json({ error: 'Not signed in' }, 401);
+        return json({ admin: publicAdmin(admin) });
+      }
+
+      if (url.pathname === '/api/auth/logout' && method === 'POST') {
+        const token = readCookie(request, COOKIE);
+        if (token) {
+          await env.DB.prepare('DELETE FROM admin_sessions WHERE token_hash = ?')
+            .bind(await sha256Hex(token))
+            .run();
+        }
+        return new Response(null, { status: 204, headers: { 'set-cookie': clearedCookie(), 'cache-control': 'no-store' } });
+      }
+
+      if (url.pathname === '/api/auth/password' && method === 'POST') {
+        if (!admin) return json({ error: 'Not signed in' }, 401);
+        const body = await readJson(request);
+        const current = typeof body?.currentPassword === 'string' ? body.currentPassword : '';
+        const next = typeof body?.newPassword === 'string' ? body.newPassword : '';
+        const row = await env.DB.prepare('SELECT password_hash FROM admins WHERE id = ?').bind(admin.id).first();
+        if (!row || !(await passwordMatches(current, row.password_hash))) {
+          return json({ error: 'Your current password is wrong.' }, 401);
+        }
+        const problem = passwordProblem(next);
+        if (problem) return json({ error: problem }, 400);
+        await env.DB.batch([
+          env.DB.prepare(
+            'UPDATE admins SET password_hash = ?, must_change = 0, password_changed_at = ? WHERE id = ?'
+          ).bind(await hashPassword(next), Date.now(), admin.id),
+          env.DB.prepare('DELETE FROM admin_sessions WHERE admin_id = ? AND token_hash <> ?')
+            .bind(admin.id, await sha256Hex(readCookie(request, COOKIE) || '')),
+        ]);
+        await audit(env, admin.id, 'admin.password', admin.username);
+        return json({ ok: true });
+      }
+
+      if (url.pathname === '/api/auth/forgot' && method === 'POST') {
+        const body = await readJson(request);
+        const username = cleanUsername(body?.username);
+        const target = await env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+
+        if (target && !target.disabled) {
+          const recent = await env.DB.prepare(
+            'SELECT COUNT(*) AS total FROM reset_requests WHERE admin_id = ? AND created_at > ?'
+          )
+            .bind(target.id, Date.now() - 60 * 60 * 1000)
+            .first('total');
+
+          if (!recent || recent < 3) {
+            await env.DB.prepare(
+              'INSERT INTO reset_requests (admin_id, created_at, expires_at) VALUES (?, ?, ?)'
+            )
+              .bind(target.id, Date.now(), Date.now() + RESET_MS)
+              .run();
+            await audit(env, target.id, 'admin.forgot', username);
+          }
+        }
+        // Same answer either way so usernames cannot be probed.
+        return json({ ok: true });
+      }
+
+      if (url.pathname === '/api/auth/reset' && method === 'POST') {
+        const body = await readJson(request);
+        const username = cleanUsername(body?.username);
+        const code = typeof body?.code === 'string' ? body.code.replace(/\D/g, '') : '';
+        const next = typeof body?.newPassword === 'string' ? body.newPassword : '';
+        const target = await env.DB.prepare('SELECT * FROM admins WHERE username = ?').bind(username).first();
+        const problem = passwordProblem(next);
+        if (problem) return json({ error: problem }, 400);
+        if (!target) return json({ error: 'That code is wrong or has expired.' }, 400);
+
+        const requestRow = await env.DB.prepare(
+          `SELECT * FROM reset_requests
+           WHERE admin_id = ? AND used_at IS NULL AND code_hash IS NOT NULL AND expires_at > ?
+           ORDER BY created_at DESC LIMIT 1`
+        )
+          .bind(target.id, Date.now())
+          .first();
+
+        if (!requestRow || !same(await sha256Hex(code), requestRow.code_hash)) {
+          return json({ error: 'That code is wrong or has expired.' }, 400);
+        }
+
+        const now = Date.now();
+        await env.DB.batch([
+          env.DB.prepare(
+            'UPDATE admins SET password_hash = ?, must_change = 0, failed_attempts = 0, locked_until = NULL, password_changed_at = ? WHERE id = ?'
+          ).bind(await hashPassword(next), now, target.id),
+          env.DB.prepare('UPDATE reset_requests SET used_at = ? WHERE id = ?').bind(now, requestRow.id),
+          env.DB.prepare('DELETE FROM admin_sessions WHERE admin_id = ?').bind(target.id),
+        ]);
+        await audit(env, target.id, 'admin.reset', username);
+        return json({ ok: true });
+      }
+
+      if (url.pathname === '/api/station' && method === 'POST') {
+        if (!admin) return json({ error: 'Sign in to run the counter.' }, 401);
+        return stationAction(env, admin, request);
+      }
+
+      if (url.pathname === '/api/admin/team' && method === 'GET') {
+        if (!admin) return json({ error: 'Sign in to run the counter.' }, 401);
+        if (admin.role !== 'owner') return json({ error: 'Only the main admin can manage admins.' }, 403);
+        return json(await teamList(env));
+      }
+
+      if (url.pathname === '/api/admin/team' && method === 'POST') {
+        if (!admin) return json({ error: 'Sign in to run the counter.' }, 401);
+        if (admin.role !== 'owner') return json({ error: 'Only the main admin can add admins.' }, 403);
+        return createAdmin(env, admin, request);
+      }
+
+      const teamAction = url.pathname.match(/^\/api\/admin\/team\/(\d+)\/(disabled|reset-code|password)$/);
+      if (teamAction && method === 'POST') {
+        if (!admin) return json({ error: 'Sign in to run the counter.' }, 401);
+        if (admin.role !== 'owner') return json({ error: 'Only the main admin can manage admins.' }, 403);
+
+        const targetId = Number(teamAction[1]);
+        const action = teamAction[2];
+        const target = await env.DB.prepare('SELECT * FROM admins WHERE id = ?').bind(targetId).first();
+        if (!target) return json({ error: 'No such admin' }, 404);
+
+        if (action === 'disabled') {
+          const body = await readJson(request);
+          const disabled = Boolean(body?.disabled);
+          if (disabled && target.id === admin.id) {
+            return json({ error: 'You cannot disable your own account.' }, 400);
+          }
+          if (disabled && target.role === 'owner') {
+            const owners = await env.DB.prepare(
+              "SELECT COUNT(*) AS total FROM admins WHERE role = 'owner' AND disabled = 0"
+            ).first('total');
+            if (!owners || owners <= 1) {
+              return json({ error: 'Keep at least one active main admin.' }, 400);
+            }
+          }
+          await env.DB.batch([
+            env.DB.prepare('UPDATE admins SET disabled = ? WHERE id = ?').bind(disabled ? 1 : 0, target.id),
+            env.DB.prepare('DELETE FROM admin_sessions WHERE admin_id = ?').bind(target.id),
+          ]);
+          await audit(env, admin.id, disabled ? 'admin.disable' : 'admin.enable', target.username);
+          return json({ ok: true });
+        }
+
+        if (action === 'reset-code') return issueResetCode(env, admin, target.id);
+
+        if (action === 'password') {
+          const body = await readJson(request);
+          const password = typeof body?.password === 'string' ? body.password : '';
+          const problem = passwordProblem(password);
+          if (problem) return json({ error: problem }, 400);
+          await env.DB.batch([
+            env.DB.prepare(
+              'UPDATE admins SET password_hash = ?, must_change = 1, failed_attempts = 0, locked_until = NULL, password_changed_at = ? WHERE id = ?'
+            ).bind(await hashPassword(password), Date.now(), target.id),
+            env.DB.prepare('DELETE FROM admin_sessions WHERE admin_id = ?').bind(target.id),
+          ]);
+          await audit(env, admin.id, 'admin.set-password', target.username);
+          return json({ ok: true, password });
+        }
       }
 
       return json({ error: 'Not found' }, 404);

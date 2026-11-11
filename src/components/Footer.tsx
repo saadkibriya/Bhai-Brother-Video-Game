@@ -46,6 +46,9 @@ export function Footer() {
             © {new Date().getFullYear()} {SHOP.fullName}. <span className="bn">{SHOP.banglaName}</span>
           </span>
           <span>Green City, Block C · Mohammadpur, Dhaka</span>
+          <span className="footer-credit">
+            Site by <span className="footer-credit__name">Techsomaj</span> · All rights reserved
+          </span>
         </div>
       </div>
     </footer>

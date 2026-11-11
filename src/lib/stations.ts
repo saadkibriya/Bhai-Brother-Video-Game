@@ -37,11 +37,8 @@ async function readError(response: Response): Promise<string> {
   return body?.error ?? 'The counter API did not answer.';
 }
 
-export async function fetchState(key?: string): Promise<ShopState> {
-  const response = await fetch('/api/status', {
-    cache: 'no-store',
-    headers: key ? { 'x-admin-key': key } : undefined,
-  });
+export async function fetchState(): Promise<ShopState> {
+  const response = await fetch('/api/status', { cache: 'no-store', credentials: 'same-origin' });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as ShopState;
 }
@@ -56,16 +53,16 @@ export async function adminVerify(key: string): Promise<void> {
 }
 
 export async function adminAction(
-  key: string,
   id: string,
   action: StationAction,
   details: { player?: string; minutes?: number } = {}
 ): Promise<ShopState> {
   const response = await fetch('/api/station', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-admin-key': key },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id, action, ...details }),
     cache: 'no-store',
+    credentials: 'same-origin',
   });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as ShopState;
@@ -102,6 +99,16 @@ export function remainingLabel(endsAt: number, now: number): string {
   if (left <= 0) return 'Time is up';
   const minutes = Math.ceil(left / 60_000);
   return `${minutes} min left`;
+}
+
+export function formatDayTime(value: number): string {
+  return new Date(value).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Asia/Dhaka',
+  });
 }
 
 export function clockLabel(endsAt: number): string {

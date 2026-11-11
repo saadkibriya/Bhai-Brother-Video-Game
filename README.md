@@ -76,3 +76,43 @@ The panel key lives in the `ADMIN_KEY` secret, never in the bundle. Set it under
 missing, the public board still works and the panel says so instead of accepting writes.
 
 `ADMIN_KEY` must be set for both the preview and production environments before writes work there.
+
+## Admin accounts
+
+The counter panel uses per-person accounts, not a shared key. Passwords are hashed with PBKDF2
+(SHA-256, 60k iterations, per-account salt) in D1; sessions are random 32-byte tokens stored hashed
+and sent as an HttpOnly, Secure, SameSite=Strict cookie that lasts 12 hours.
+
+Roles: **owner** (adds admins, issues reset codes, disables accounts) and **admin** (times sessions,
+blocks stations). The panel refuses station writes without a session, and `POST` requests from
+another origin are rejected.
+
+First run: open `/admin` and create the main admin with the `ADMIN_KEY` setup key, or call
+`POST /api/auth/setup` with `x-admin-key`. Locked out? `POST /api/auth/recover` with the same secret
+resets an owner password.
+
+### Password reset
+
+There is no SMS/WhatsApp API wired in, so the verification happens in the WhatsApp chat the shop
+already uses:
+
+1. The admin enters their username on `/admin` → a reset request is recorded (3 per hour, same
+   response whether the username exists or not).
+2. The owner verifies who they are on WhatsApp, opens **Team**, and taps **Reset code**.
+3. The panel shows a 6-digit code valid for 30 minutes, single use. The owner sends it to the admin.
+4. The admin enters the code and a new password. All that admin's sessions are signed out.
+
+### Adding admins
+
+The owner creates a username, name, role and (optional) temporary password. The panel shows the
+temporary password once, with a **Notify main WhatsApp** link that opens a prefilled message to
+`SHOP.whatsapp`. The new admin is prompted to change the password after signing in.
+
+### Tables
+
+`admins`, `admin_sessions`, `reset_requests`, `audit_log`, plus the existing `stations` and
+`sessions`. Created automatically on the first request; there is no separate migration step.
+
+## Credit
+
+Site by **Techsomaj**. All rights reserved.
