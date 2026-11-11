@@ -1300,6 +1300,8 @@ h3 {
 .day-strip {
   display: flex;
   gap: 0.45rem;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   padding-bottom: 0.4rem;
   scrollbar-width: thin;
@@ -1439,6 +1441,12 @@ h3 {
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
   gap: clamp(1.8rem, 4vw, 3.5rem);
   align-items: start;
+}
+
+/* Grid children default to min-width:auto, which lets the scrollable day
+   strip push the whole form wider than the viewport on phones. */
+.book-grid > * {
+  min-width: 0;
 }
 
 .summary {
@@ -1603,7 +1611,7 @@ h3 {
   .tournament__grid,
   .visit__grid,
   .book-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .summary {
