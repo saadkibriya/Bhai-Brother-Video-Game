@@ -122,6 +122,22 @@ export function AdminPage() {
     setScreen('login');
   };
 
+  const heading = needsSetup
+    ? 'Set up the counter'
+    : screen === 'forgot'
+      ? 'Reset your password'
+      : screen === 'reset'
+        ? 'Enter your reset code'
+        : 'Admin sign in';
+
+  const intro = needsSetup
+    ? 'No admin exists yet. Create the main admin account with the setup key, then add the counter team.'
+    : screen === 'forgot'
+      ? 'Enter your username. The main admin verifies it is you on WhatsApp, then sends a one-time code.'
+      : screen === 'reset'
+        ? 'Type the 6-digit code from the main admin and choose a new password.'
+        : 'Sign in to time sessions, log players and manage the station board. The panel is for staff only.';
+
   if (screen === 'panel' && admin) {
     return (
       <CounterPanel
@@ -140,12 +156,8 @@ export function AdminPage() {
       <section className="band band--ink page-head">
         <div className="wrap">
           <p className="eyebrow">Staff</p>
-          <h1>{needsSetup ? 'Set up the counter' : 'Admin sign in'}</h1>
-          <p className="lede">
-            {needsSetup
-              ? 'No admin exists yet. Create the main admin account with the setup key, then add the counter team.'
-              : 'Sign in to time sessions, log players and manage the station board. The panel is for staff only.'}
-          </p>
+          <h1>{heading}</h1>
+          <p className="lede">{intro}</p>
         </div>
       </section>
 
