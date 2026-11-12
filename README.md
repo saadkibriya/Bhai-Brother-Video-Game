@@ -46,9 +46,29 @@ bun run build    # typecheck + production build into dist/
 
 ## Deploying
 
-`bun run build` produces `dist/` with no server requirement. It is deployed as a static
-site (Freebuff Sites). The app uses client-side routing, so the host must serve
-`index.html` for unknown paths (SPA fallback).
+There are two builds from the same source.
+
+**Counter site** — `bun run build` → `dist/`. This one carries the staff panel, the QR page and
+its own `/api`, so it must stay on the Worker host (Freebuff Sites). It is live at
+`https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page`.
+
+**Public site** — GitHub Pages, from the `docs/` folder on `main`:
+`https://saadkibriya.github.io/Bhai-Brother-Video-Game/`.
+
+```bash
+VITE_PUBLIC_ONLY=1 \
+VITE_SITE_BASE=/Bhai-Brother-Video-Game/ \
+VITE_OUT_DIR=docs \
+VITE_SITE_URL=https://saadkibriya.github.io/Bhai-Brother-Video-Game \
+VITE_API_BASE=https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page \
+bun run build
+```
+
+That build drops `/admin`, `/admin/settings` and `/qr`, rewrites canonical/Open Graph URLs,
+`robots.txt`, `sitemap.xml` and the manifest for the new origin, writes one `index.html` per
+public route (Pages has no rewrites) plus a `404.html` fallback, and removes `sw.js` and the
+QR artwork. The live board reads the public read-only `/api/status` from the counter host.
+Commit the regenerated `docs/` and push; Pages redeploys from `main` → `/docs`.
 
 `supabase/` and the old spec documents were removed with the fake backend; they remain in
 git history if a real booking database is ever added.
