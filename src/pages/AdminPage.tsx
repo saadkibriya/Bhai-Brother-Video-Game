@@ -2,10 +2,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { SHOP } from '../data/shop';
 import { whatsappUrl } from '../lib/booking';
 import { codeProblem, normalizeCode, passwordProblem, usernameProblem } from '../lib/credentials';
-import { adminApi, type Admin } from '../lib/adminApi';
+import { ApiError, adminApi, type Admin } from '../lib/adminApi';
 import { CounterPanel } from '../components/CounterPanel';
 
-type Screen = 'loading' | 'setup' | 'login' | 'forgot' | 'reset' | 'panel';
+type Screen = 'loading' | 'setup' | 'login' | 'forgot' | 'reset' | 'panel' | 'offline';
 
 export function AdminPage() {
   const [screen, setScreen] = useState<Screen>('loading');
@@ -20,8 +20,12 @@ export function AdminPage() {
   const [reset, setReset] = useState({ username: '', code: '', password: '' });
   const [needsSetup, setNeedsSetup] = useState(false);
 
-  useEffect(() => {
-    (async () => {
+  async function checkSession() {
+    setScreen('loading');
+    setError('');
+
+    // A dropped connection is not a sign-out: only a 401 means signed out.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         const status = await adminApi.setupStatus();
         setNeedsSetup(status.needsSetup);
@@ -32,10 +36,25 @@ export function AdminPage() {
         const current = await adminApi.me();
         setAdmin(current.admin);
         setScreen('panel');
-      } catch {
-        setScreen('login');
+        return;
+      } catch (problem) {
+        if (problem instanceof ApiError && problem.status === 401) {
+          setScreen('login');
+          return;
+        }
+        if (attempt === 1) {
+          setError(problem instanceof Error ? problem.message : 'Could not reach the counter server.');
+          setScreen('offline');
+          return;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1200));
       }
-    })();
+    }
+  }
+
+  useEffect(() => {
+    void checkSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
@@ -128,7 +147,9 @@ export function AdminPage() {
       ? 'Reset your password'
       : screen === 'reset'
         ? 'Enter your reset code'
-        : 'Admin sign in';
+        : screen === 'offline'
+          ? 'Cannot reach the counter'
+          : 'Admin sign in';
 
   const intro = needsSetup
     ? 'No admin exists yet. Create the main admin account with the setup key, then add the counter team.'
@@ -136,7 +157,9 @@ export function AdminPage() {
       ? 'Enter your username. The main admin verifies it is you on WhatsApp, then sends a one-time code.'
       : screen === 'reset'
         ? 'Type the 6-digit code from the main admin and choose a new password.'
-        : 'Sign in to time sessions, log players and manage the station board. The panel is for staff only.';
+        : screen === 'offline'
+          ? 'The panel could not reach the counter server. Check the connection and try again — you are still signed in.'
+          : 'Sign in to time sessions, log players and manage the station board. The panel is for staff only.';
 
   if (screen === 'panel' && admin) {
     return (
@@ -165,6 +188,28 @@ export function AdminPage() {
         <div className="wrap auth">
           <div className="auth-card">
             {screen === 'loading' && <p className="summary__note">Checking your session…</p>}
+
+            {screen === 'offline' && (
+              <div className="auth-form">
+                <p className="summary__note">
+                  Sessions last for months, so a failed request does not sign you out. If this keeps
+                  happening, check that the shop wifi is working.
+                </p>
+                <button className="btn btn--flame" type="button" onClick={() => void checkSession()}>
+                  Try again
+                </button>
+                <button
+                  className="link-underline auth__back"
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setScreen('login');
+                  }}
+                >
+                  Sign in instead
+                </button>
+              </div>
+            )}
 
             {notice && screen !== 'panel' && (
               <p className="banner banner--ok" role="status">

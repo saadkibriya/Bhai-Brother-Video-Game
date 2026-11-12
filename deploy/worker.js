@@ -7,7 +7,10 @@ const STATION_SEED = [
 
 const DHAKA_OFFSET = 6 * 60 * 60 * 1000;
 const COOKIE = 'bb_admin';
-const SESSION_MS = 12 * 60 * 60 * 1000;
+// The counter phone stays signed in: the session slides forward while it is
+// used, and the cookie itself is kept for a year.
+const SESSION_MS = 90 * 24 * 60 * 60 * 1000;
+const COOKIE_MS = 365 * 24 * 60 * 60 * 1000;
 const RESET_MS = 30 * 60 * 1000;
 const MAX_FAILS = 8;
 const LOCK_MS = 15 * 60 * 1000;
@@ -325,9 +328,15 @@ async function currentAdmin(request, env) {
     .first();
 
   if (!row) return null;
-  if (row.expires_at < Date.now() || row.disabled) {
+  const now = Date.now();
+  if (row.expires_at < now || row.disabled) {
     await env.DB.prepare('DELETE FROM admin_sessions WHERE token_hash = ?').bind(tokenHash).run();
     return null;
+  }
+  if (row.expires_at - now < SESSION_MS / 2) {
+    await env.DB.prepare('UPDATE admin_sessions SET expires_at = ? WHERE token_hash = ?')
+      .bind(now + SESSION_MS, tokenHash)
+      .run();
   }
   return {
     id: row.id,
@@ -389,7 +398,7 @@ async function login(env, request) {
     .run();
   await audit(env, admin.id, 'login', admin.username);
 
-  return json({ admin: publicAdmin(admin) }, 200, { 'set-cookie': cookieHeader(token, SESSION_MS / 1000) });
+  return json({ admin: publicAdmin(admin) }, 200, { 'set-cookie': cookieHeader(token, COOKIE_MS / 1000) });
 }
 
 async function stationAction(env, admin, request) {

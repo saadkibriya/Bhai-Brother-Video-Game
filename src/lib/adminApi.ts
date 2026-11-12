@@ -24,6 +24,16 @@ export interface PendingReset {
   issued: boolean;
 }
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     cache: 'no-store',
@@ -38,7 +48,7 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (response.status === 204) return undefined as T;
 
   const body = (await response.json().catch(() => null)) as { error?: string } | null;
-  if (!response.ok) throw new Error(body?.error ?? 'The counter server did not answer.');
+  if (!response.ok) throw new ApiError(body?.error ?? 'The counter server did not answer.', response.status);
   return body as T;
 }
 

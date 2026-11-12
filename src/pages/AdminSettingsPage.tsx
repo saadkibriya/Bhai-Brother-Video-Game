@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { adminApi, type Admin } from '../lib/adminApi';
+import { ApiError, adminApi, type Admin } from '../lib/adminApi';
 import { passwordProblem, usernameProblem } from '../lib/credentials';
 
 export function AdminSettingsPage() {
@@ -10,6 +10,7 @@ export function AdminSettingsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [working, setWorking] = useState('');
+  const [loadProblem, setLoadProblem] = useState('');
 
   const [name, setName] = useState({ username: '', password: '' });
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
@@ -20,8 +21,9 @@ export function AdminSettingsPage() {
         const current = await adminApi.me();
         setAdmin(current.admin);
         setName({ username: current.admin.username, password: '' });
-      } catch {
-        setAdmin(null);
+      } catch (problem) {
+        if (problem instanceof ApiError && problem.status === 401) setAdmin(null);
+        else setLoadProblem(problem instanceof Error ? problem.message : 'Could not reach the counter server.');
       } finally {
         setChecking(false);
       }
@@ -101,10 +103,20 @@ export function AdminSettingsPage() {
 
             {!checking && !admin && (
               <>
-                <p className="eyebrow">Signed out</p>
-                <p>Sign in to the counter panel first, then come back here to change your details.</p>
+                {loadProblem ? (
+                  <p className="error" role="alert">
+                    {loadProblem}
+                  </p>
+                ) : (
+                  <p className="eyebrow">Signed out</p>
+                )}
+                <p>
+                  {loadProblem
+                    ? 'You are probably still signed in — go back to the panel and it will retry.'
+                    : 'Sign in to the counter panel first, then come back here to change your details.'}
+                </p>
                 <Link className="btn btn--flame" to="/admin">
-                  Go to sign in
+                  {loadProblem ? 'Back to the panel' : 'Go to sign in'}
                 </Link>
               </>
             )}
@@ -221,8 +233,8 @@ export function AdminSettingsPage() {
               signs out every other device still logged in to the panel.
             </p>
             <p>
-              You stay signed in on this device after a change, so carry on timing sessions straight
-              away.
+              You stay signed in on this device — the panel keeps the session alive for months, so
+              you only sign in again after a password change or if you sign out yourself.
             </p>
             {admin && (
               <p className="summary__note">
