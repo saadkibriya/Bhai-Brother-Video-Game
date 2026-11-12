@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import {
   SESSION_LENGTHS,
   adminAction,
@@ -191,6 +192,9 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
             name and length, and the panel warns you 10 and 5 minutes before the time is up.
           </p>
           <div className="hero__actions">
+            <Link className="btn btn--ghost" to="/qr">
+              Counter QR
+            </Link>
             <button className="btn btn--ghost" type="button" onClick={() => setPasswordOpen((open) => !open)}>
               Change password
             </button>

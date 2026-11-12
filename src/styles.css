@@ -2483,3 +2483,136 @@ h3 {
   font-weight: 600;
   letter-spacing: 0.04em;
 }
+
+/* --- counter QR ---------------------------------------------------------- */
+
+.qr-page__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: clamp(1.8rem, 4vw, 3.5rem);
+  align-items: start;
+}
+
+.qr-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  padding: 1.7rem 1.6rem;
+  background: #fff;
+  color: #121110;
+  border: 1px solid var(--paper-line);
+  text-align: center;
+}
+
+.qr-card h1 {
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+  color: #0b0b0d;
+}
+
+.qr-card .eyebrow {
+  color: #b8400f;
+}
+
+.qr-card__code {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+}
+
+.qr-card__lead {
+  max-width: 32ch;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #3a352c;
+}
+
+.qr-card__foot {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  line-height: 1.8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5f594e;
+}
+
+.qr-card__credit {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8375;
+}
+
+.qr-tools {
+  display: grid;
+  justify-items: start;
+  gap: 0.9rem;
+  max-width: 52ch;
+  color: var(--text-ink);
+}
+
+.qr-tools h2 {
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+}
+
+.qr-tools p {
+  font-size: 0.94rem;
+  line-height: 1.8;
+  color: var(--muted-ink);
+}
+
+@media (max-width: 760px) {
+  .qr-page__inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 18mm;
+  }
+
+  .site-header,
+  .site-footer,
+  .skip-link,
+  .no-print,
+  .toasts,
+  .alert-overlay {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .band {
+    padding: 0;
+  }
+
+  .qr-page__inner {
+    display: block;
+    width: 100%;
+  }
+
+  .qr-card {
+    gap: 8mm;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: #fff;
+  }
+
+  .qr-card__code {
+    max-width: 140mm;
+  }
+
+  .qr-card__lead {
+    font-size: 14pt;
+    max-width: none;
+  }
+
+  .qr-card__foot {
+    font-size: 9pt;
+  }
+}
