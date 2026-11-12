@@ -293,7 +293,7 @@ export function AdminPage() {
                       value={forgotName}
                       onChange={(event) => setForgotName(event.target.value)}
                       autoCapitalize="none"
-                      placeholder="nadia"
+                      placeholder="username"
                     />
                   </label>
                   <button className="btn btn--flame" type="submit" disabled={working === 'forgot'}>
