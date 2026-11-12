@@ -1,3 +1,5 @@
+import { API_BASE } from './siteMode';
+
 export type StationStatus = 'free' | 'busy' | 'blocked';
 export type StationAction = 'start' | 'stop' | 'block' | 'unblock';
 
@@ -38,7 +40,7 @@ async function readError(response: Response): Promise<string> {
 }
 
 export async function fetchState(): Promise<ShopState> {
-  const response = await fetch('/api/status', { cache: 'no-store', credentials: 'same-origin' });
+  const response = await fetch(`${API_BASE}/api/status`, { cache: 'no-store', credentials: 'same-origin' });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as ShopState;
 }
@@ -57,7 +59,7 @@ export async function adminAction(
   action: StationAction,
   details: { player?: string; minutes?: number } = {}
 ): Promise<ShopState> {
-  const response = await fetch('/api/station', {
+  const response = await fetch(`${API_BASE}/api/station`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id, action, ...details }),

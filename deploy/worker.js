@@ -551,7 +551,8 @@ export default {
 
       if (url.pathname === '/api/status' && method === 'GET') {
         // The board shows who is playing, as the shop asked.
-        return json(await readState(env, true));
+        // Read-only public data, so the public site can be hosted on another origin.
+        return json(await readState(env, true), 200, { 'access-control-allow-origin': '*' });
       }
 
       if (url.pathname === '/api/auth/setup' && method === 'GET') {

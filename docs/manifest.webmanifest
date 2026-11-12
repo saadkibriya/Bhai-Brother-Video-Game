@@ -1,0 +1,24 @@
+{
+  "name": "Bhai Brother Video Game",
+  "short_name": "Bhai Brother",
+  "description": "PS5, PS4 and arcade gaming in Green City, Mohammadpur, Dhaka.",
+  "start_url": "/Bhai-Brother-Video-Game/",
+  "scope": "/Bhai-Brother-Video-Game/",
+  "display": "standalone",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    {
+      "src": "/Bhai-Brother-Video-Game/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Bhai-Brother-Video-Game/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

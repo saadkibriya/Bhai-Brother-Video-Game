@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { SHOP } from '../data/shop';
 import { HOURS, hoursSummary } from '../lib/hours';
+import { PUBLIC_ONLY } from '../lib/siteMode';
 
 export function Footer() {
   return (
@@ -33,7 +34,7 @@ export function Footer() {
             <Link to="/pricing">Rates &amp; passes</Link>
             <Link to="/book">Book a station</Link>
             <Link to="/visit">Visit</Link>
-            <Link to="/admin">Staff panel</Link>
+            {!PUBLIC_ONLY && <Link to="/admin">Staff panel</Link>}
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import { SHOP } from '../data/shop';
 import { OpenStatus } from './OpenStatus';
 import { ThemeToggle } from './ThemeToggle';
 import { PhoneIcon } from './icons';
+import { PUBLIC_ONLY } from '../lib/siteMode';
 
 const LINKS = [
   { to: '/', label: 'Home' },
@@ -11,7 +12,7 @@ const LINKS = [
   { to: '/pricing', label: 'Rates' },
   { to: '/book', label: 'Book' },
   { to: '/visit', label: 'Visit' },
-  { to: '/admin', label: 'Staff' },
+  ...(PUBLIC_ONLY ? [] : [{ to: '/admin', label: 'Staff' }]),
 ];
 
 export function Header() {

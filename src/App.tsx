@@ -11,6 +11,7 @@ import { AdminPage } from './pages/AdminPage';
 import { AdminSettingsPage } from './pages/AdminSettingsPage';
 import { QrPage } from './pages/QrPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { PUBLIC_ONLY, ROUTER_BASE } from './lib/siteMode';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -24,7 +25,7 @@ function ScrollToTop() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={ROUTER_BASE}>
       <ScrollToTop />
       <a className="skip-link" href="#main">
         Skip to content
@@ -37,9 +38,13 @@ export default function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/book" element={<BookPage />} />
           <Route path="/visit" element={<VisitPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/settings" element={<AdminSettingsPage />} />
-          <Route path="/qr" element={<QrPage />} />
+          {!PUBLIC_ONLY && (
+            <>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/settings" element={<AdminSettingsPage />} />
+              <Route path="/qr" element={<QrPage />} />
+            </>
+          )}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

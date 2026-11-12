@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://saadkibriya.github.io/Bhai-Brother-Video-Game/sitemap.xml

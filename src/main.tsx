@@ -9,7 +9,7 @@ import App from './App';
 createRoot(document.getElementById('root')!).render(<App />);
 
 // Installable app: cache the shell, never cache API responses.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator && import.meta.env.PROD && import.meta.env.BASE_URL === '/') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {
       /* installability is a bonus, not a requirement */
