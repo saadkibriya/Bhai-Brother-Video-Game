@@ -8,6 +8,7 @@ import { PricingPage } from './pages/PricingPage';
 import { BookPage } from './pages/BookPage';
 import { VisitPage } from './pages/VisitPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminSettingsPage } from './pages/AdminSettingsPage';
 import { QrPage } from './pages/QrPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/book" element={<BookPage />} />
           <Route path="/visit" element={<VisitPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/settings" element={<AdminSettingsPage />} />
           <Route path="/qr" element={<QrPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

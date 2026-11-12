@@ -15,7 +15,6 @@ import {
   type StationState,
 } from '../lib/stations';
 import { durationLabel } from '../lib/pricing';
-import { passwordProblem } from '../lib/credentials';
 import { adminApi, type Admin } from '../lib/adminApi';
 import { AdminTeam } from './AdminTeam';
 
@@ -53,10 +52,6 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
   const [notifyState, setNotifyState] = useState<string>(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
   );
-  const [passwordOpen, setPasswordOpen] = useState(admin.mustChange);
-  const [passwords, setPasswords] = useState({ current: '', next: '' });
-  const [passwordNotice, setPasswordNotice] = useState('');
-
   const fired = useRef<Record<string, AlertKind[]>>({});
 
   useEffect(() => {
@@ -152,25 +147,6 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
     setStartDraft({ player: '', minutes: 60 });
   }
 
-  async function changePassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const problem = passwordProblem(passwords.next);
-    if (problem) return setError(problem);
-    setError('');
-    setPasswordNotice('');
-    setWorking('password');
-    try {
-      await adminApi.changePassword(passwords.current, passwords.next);
-      setPasswords({ current: '', next: '' });
-      setPasswordNotice('Password changed. Other devices have been signed out.');
-      setPasswordOpen(false);
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'Could not change the password.');
-    } finally {
-      setWorking('');
-    }
-  }
-
   async function signOut() {
     try {
       await adminApi.logout();
@@ -195,9 +171,9 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
             <Link className="btn btn--ghost" to="/qr">
               Counter QR
             </Link>
-            <button className="btn btn--ghost" type="button" onClick={() => setPasswordOpen((open) => !open)}>
-              Change password
-            </button>
+            <Link className="btn btn--ghost" to="/admin/settings">
+              Account settings
+            </Link>
             <button className="btn btn--ghost" type="button" onClick={signOut}>
               Sign out
             </button>
@@ -207,53 +183,14 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
 
       <section className="band band--ink-2">
         <div className="wrap">
-          {admin.mustChange && !passwordOpen && (
+          {admin.mustChange && (
             <p className="banner banner--warn">
               You are using a temporary password.{' '}
-              <button className="link-underline" type="button" onClick={() => setPasswordOpen(true)}>
+              <Link className="link-underline" to="/admin/settings">
                 Change it now
-              </button>
+              </Link>
               .
             </p>
-          )}
-
-          {passwordNotice && (
-            <p className="banner banner--ok" role="status">
-              {passwordNotice}
-            </p>
-          )}
-
-          {passwordOpen && (
-            <form className="admin-lock" onSubmit={changePassword}>
-              <p className="eyebrow">Change password</p>
-              <div className="two-up">
-                <label className="field">
-                  <span className="field__label">Current password</span>
-                  <input
-                    className="input"
-                    type="password"
-                    value={passwords.current}
-                    onChange={(event) =>
-                      setPasswords((current) => ({ ...current, current: event.target.value }))
-                    }
-                    autoComplete="current-password"
-                  />
-                </label>
-                <label className="field">
-                  <span className="field__label">New password</span>
-                  <input
-                    className="input"
-                    type="password"
-                    value={passwords.next}
-                    onChange={(event) => setPasswords((current) => ({ ...current, next: event.target.value }))}
-                    autoComplete="new-password"
-                  />
-                </label>
-              </div>
-              <button className="btn btn--flame" type="submit" disabled={working === 'password'}>
-                Save password
-              </button>
-            </form>
           )}
 
           <div className="admin-bar">

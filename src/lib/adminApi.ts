@@ -62,6 +62,11 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+  changeUsername: (currentPassword: string, username: string) =>
+    call<{ ok: true; admin: Admin }>('/api/auth/username', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, username }),
+    }),
   forgot: (username: string) =>
     call<{ ok: true }>('/api/auth/forgot', { method: 'POST', body: JSON.stringify({ username }) }),
   reset: (username: string, code: string, newPassword: string) =>

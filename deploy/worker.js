@@ -650,6 +650,29 @@ export default {
         return json({ ok: true });
       }
 
+      if (url.pathname === '/api/auth/username' && method === 'POST') {
+        if (!admin) return json({ error: 'Not signed in' }, 401);
+        const body = await readJson(request);
+        const current = typeof body?.currentPassword === 'string' ? body.currentPassword : '';
+        const username = cleanUsername(body?.username);
+
+        const row = await env.DB.prepare('SELECT password_hash FROM admins WHERE id = ?').bind(admin.id).first();
+        if (!row || !(await passwordMatches(current, row.password_hash))) {
+          return json({ error: 'Your current password is wrong.' }, 401);
+        }
+
+        const problem = usernameProblem(username);
+        if (problem) return json({ error: problem }, 400);
+        if (username === admin.username) return json({ ok: true, admin: publicAdmin(admin) });
+
+        const taken = await env.DB.prepare('SELECT id FROM admins WHERE username = ?').bind(username).first();
+        if (taken) return json({ error: 'That username is already taken.' }, 409);
+
+        await env.DB.prepare('UPDATE admins SET username = ? WHERE id = ?').bind(username, admin.id).run();
+        await audit(env, admin.id, 'admin.username', `${admin.username} -> ${username}`);
+        return json({ ok: true, admin: { ...publicAdmin(admin), username } });
+      }
+
       if (url.pathname === '/api/auth/forgot' && method === 'POST') {
         const body = await readJson(request);
         const username = cleanUsername(body?.username);
