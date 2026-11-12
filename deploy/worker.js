@@ -1,7 +1,8 @@
+// Only the consoles are timed. The arcade cabinet is walk-up: tokens from the
+// counter, no clock, so it is not part of the station board.
 const STATION_SEED = [
   { id: 'ps5-1', name: 'PS5 #1', platform: 'PS5', sort: 1 },
   { id: 'ps4-1', name: 'PS4 #1', platform: 'PS4', sort: 2 },
-  { id: 'arcade-1', name: 'Arcade cabinet', platform: 'Arcade', sort: 3 },
 ];
 
 const DHAKA_OFFSET = 6 * 60 * 60 * 1000;
@@ -149,6 +150,28 @@ async function ensureColumn(env, table, column, definition) {
   }
 }
 
+async function cleanupTestData(env) {
+  const done = await env.DB.prepare("SELECT value FROM meta WHERE key = 'cleanup-test-data'").first();
+  if (done) return;
+
+  const owner = await env.DB.prepare(
+    "SELECT id FROM admins WHERE role = 'owner' ORDER BY id LIMIT 1"
+  ).first();
+
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions'),
+    env.DB.prepare('DELETE FROM audit_log'),
+    env.DB.prepare('DELETE FROM reset_requests'),
+    env.DB.prepare('DELETE FROM admin_sessions'),
+    env.DB.prepare('DELETE FROM admins WHERE id <> ?').bind(owner?.id ?? 0),
+    env.DB.prepare("DELETE FROM stations WHERE id NOT IN ('ps5-1', 'ps4-1')"),
+    env.DB.prepare(
+      "UPDATE stations SET status = 'free', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, note = NULL"
+    ),
+    env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('cleanup-test-data', 'done')"),
+  ]);
+}
+
 async function ensureSchema(env) {
   await env.DB.batch([
     env.DB.prepare(
@@ -213,6 +236,7 @@ async function ensureSchema(env) {
         issued_by TEXT
       )`
     ),
+    env.DB.prepare('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)'),
     env.DB.prepare(
       `CREATE TABLE IF NOT EXISTS audit_log (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -231,6 +255,7 @@ async function ensureSchema(env) {
   await ensureColumn(env, 'sessions', 'planned_minutes', 'INTEGER');
 
   const total = await env.DB.prepare('SELECT COUNT(*) AS total FROM stations').first('total');
+  await cleanupTestData(env);
   if (!total) {
     const now = Date.now();
     await env.DB.batch(
@@ -525,7 +550,8 @@ export default {
       }
 
       if (url.pathname === '/api/status' && method === 'GET') {
-        return json(await readState(env, Boolean(admin)));
+        // The board shows who is playing, as the shop asked.
+        return json(await readState(env, true));
       }
 
       if (url.pathname === '/api/auth/setup' && method === 'GET') {

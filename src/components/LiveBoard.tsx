@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { elapsedLabel, fetchState, statusLabel, type ShopState } from '../lib/stations';
+import { clockLabel, elapsedLabel, fetchState, statusLabel, type ShopState } from '../lib/stations';
 
 export function LiveBoard({ compact = false }: { compact?: boolean }) {
   const [state, setState] = useState<ShopState | null>(null);
@@ -56,6 +56,12 @@ export function LiveBoard({ compact = false }: { compact?: boolean }) {
                 ? `${statusLabel(station.status)} · ${elapsedLabel(station.startedAt, Date.now())}`
                 : statusLabel(station.status)}
             </p>
+            {station.status === 'busy' && station.player && (
+              <p className="station__player">{station.player}</p>
+            )}
+            {station.status === 'busy' && station.endsAt && (
+              <p className="station__meta">Booked until {clockLabel(station.endsAt)}</p>
+            )}
             {station.status === 'blocked' && (
               <p className="station__meta">Out of service right now.</p>
             )}

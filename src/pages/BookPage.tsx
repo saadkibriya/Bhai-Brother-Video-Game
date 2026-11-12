@@ -249,7 +249,7 @@ export function BookPage() {
                       value={name}
                       onChange={(event) => setName(event.target.value)}
                       autoComplete="name"
-                      placeholder="Rafi"
+                      placeholder="Your name"
                       required
                     />
                   </div>

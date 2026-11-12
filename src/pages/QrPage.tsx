@@ -41,9 +41,9 @@ export function QrPage() {
             Print this page
           </button>
           <p className="summary__note">
-            The code is generated from the production address and shipped as a static SVG, so it
-            prints sharp and works without a network. After a domain change, regenerate it with{' '}
-            <code>bun run qr</code>.
+            The code is generated from the production address and shipped as a static image, so it
+            prints sharp and works without a network at the counter. If the address ever changes,
+            the code needs to be regenerated and the sheet reprinted.
           </p>
         </div>
       </div>

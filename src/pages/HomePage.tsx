@@ -119,8 +119,8 @@ export function HomePage() {
               <h2>What&rsquo;s free.</h2>
             </div>
             <p>
-              The counter updates this as sessions start and end. Timers are running for stations
-              in use; anything blocked is out of service.
+              The counter updates this as sessions start and end, including who is on the PS5 or
+              PS4 and until when. The arcade cabinet is walk-up — three tokens for ৳10, no timer.
             </p>
           </div>
 
@@ -128,7 +128,8 @@ export function HomePage() {
 
           <p className="note note--dark">
             <span aria-hidden="true">✱</span> Everything busy? Send a booking request and we will
-            hold the next free station for you.
+            hold the next free PS5 or PS4 for you. Arcade tokens are always available at the
+            counter.
           </p>
         </div>
       </section>

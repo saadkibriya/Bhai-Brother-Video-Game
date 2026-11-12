@@ -205,7 +205,7 @@ export function AdminTeam({ currentAdminId }: Props) {
                 className="input"
                 value={form.username}
                 onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
-                placeholder="nadia"
+                placeholder="username"
                 autoCapitalize="none"
                 autoComplete="off"
               />
@@ -216,7 +216,7 @@ export function AdminTeam({ currentAdminId }: Props) {
                 className="input"
                 value={form.displayName}
                 onChange={(event) => setForm((current) => ({ ...current, displayName: event.target.value }))}
-                placeholder="Nadia (counter)"
+                placeholder="Counter admin"
               />
             </label>
           </div>

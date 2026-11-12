@@ -274,8 +274,10 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
           </div>
 
           <p className="admin-hint">
-            Keep this panel open on the counter phone or tablet. It warns you 10 minutes and 5
-            minutes before a session ends, then pops up when the time is up.
+            Timers here are for the PS5 and PS4 only — the arcade cabinet is walk-up at ৳10 for
+            three tokens, with no time limit. Keep this panel open on the counter phone or tablet:
+            it warns you 10 minutes and 5 minutes before a session ends, then pops up when the time
+            is up.
             {notifyState === 'denied' && ' Browser notifications are blocked, so alerts only show here.'}
             {notifyState === 'granted' && ' Browser notifications are on.'}
           </p>

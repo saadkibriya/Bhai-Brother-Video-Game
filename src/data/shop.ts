@@ -147,6 +147,10 @@ export const FAQS = [
     a: 'Yes. Message the counter on WhatsApp with the date, time and how many people, and we will hold the stations together. For groups of six or more, give us a day so we can block the floor.',
   },
   {
+    q: 'How does the arcade cabinet work?',
+    a: 'Walk up and buy tokens at the counter: three tokens for ৳10, no time limit. Arcade games are on demand — you do not book them, and there is no clock running.',
+  },
+  {
     q: 'Can I come alone?',
     a: 'Absolutely. Solo players are welcome — take a pad, take the couch, and we can match you with someone waiting for a match. The hourly rate is per person.',
   },
