@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
@@ -29,7 +29,14 @@ function publicSitePlugin(options: {
       if (!existsSync(index)) return;
 
       if (publicOnly) {
-        // GitHub Pages has no SPA fallback, so hand the shell to unknown paths.
+        // GitHub Pages has no rewrites: give every public route a real file so
+        // deep links answer 200, then hand unknown paths the shell via 404.html.
+        for (const path of PUBLIC_PATHS) {
+          if (path === '/') continue;
+          const folder = resolve(dir, path.slice(1));
+          mkdirSync(folder, { recursive: true });
+          copyFileSync(index, resolve(folder, 'index.html'));
+        }
         copyFileSync(index, resolve(dir, '404.html'));
         writeFileSync(resolve(dir, '.nojekyll'), '');
         // Staff-only files: the service worker and the counter QR artwork.
