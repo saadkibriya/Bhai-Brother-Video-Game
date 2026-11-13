@@ -4,7 +4,7 @@ import { SHOP } from '../data/shop';
 import { OpenStatus } from './OpenStatus';
 import { ThemeToggle } from './ThemeToggle';
 import { PhoneIcon } from './icons';
-import { PUBLIC_ONLY } from '../lib/siteMode';
+import { PANEL_URL, PUBLIC_ONLY } from '../lib/siteMode';
 
 const LINKS = [
   { to: '/', label: 'Home' },
@@ -12,8 +12,15 @@ const LINKS = [
   { to: '/pricing', label: 'Rates' },
   { to: '/book', label: 'Book' },
   { to: '/visit', label: 'Visit' },
-  ...(PUBLIC_ONLY ? [] : [{ to: '/admin', label: 'Staff' }]),
 ];
+
+function StaffLink() {
+  return PUBLIC_ONLY ? (
+    <a href={PANEL_URL}>Staff</a>
+  ) : (
+    <NavLink to="/admin">Staff</NavLink>
+  );
+}
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,6 +42,7 @@ export function Header() {
               {link.label}
             </NavLink>
           ))}
+          <StaffLink />
         </nav>
 
         <a className="header-phone" href={`tel:${SHOP.tel}`}>
@@ -69,6 +77,7 @@ export function Header() {
                 {link.label}
               </NavLink>
             ))}
+            <StaffLink />
           </nav>
           <a className="btn btn--flame btn--block" href={`tel:${SHOP.tel}`}>
             <PhoneIcon /> Call {SHOP.phone}
