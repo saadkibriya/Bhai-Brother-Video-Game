@@ -1,9 +1,13 @@
 // Only the consoles are timed. The arcade cabinet is walk-up: tokens from the
-// counter, no clock, so it is not part of the station board.
+// counter, no clock, but it still appears on the board so it can be marked
+// out of order.
 const STATION_SEED = [
   { id: 'ps5-1', name: 'PS5 #1', platform: 'PS5', sort: 1 },
   { id: 'ps4-1', name: 'PS4 #1', platform: 'PS4', sort: 2 },
+  { id: 'arcade-1', name: 'Arcade cabinet', platform: 'Arcade', sort: 3 },
 ];
+
+const isTimed = (platform) => platform !== 'Arcade';
 
 const DHAKA_OFFSET = 6 * 60 * 60 * 1000;
 const COOKIE = 'bb_admin';
@@ -249,6 +253,17 @@ async function ensureSchema(env) {
         created_at INTEGER NOT NULL
       )`
     ),
+    env.DB.prepare(
+      `CREATE TABLE IF NOT EXISTS announcements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        body TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        created_by TEXT
+      )`
+    ),
   ]);
 
   await ensureColumn(env, 'stations', 'player', 'TEXT');
@@ -257,18 +272,18 @@ async function ensureSchema(env) {
   await ensureColumn(env, 'sessions', 'player', 'TEXT');
   await ensureColumn(env, 'sessions', 'planned_minutes', 'INTEGER');
 
-  const total = await env.DB.prepare('SELECT COUNT(*) AS total FROM stations').first('total');
   await cleanupTestData(env);
-  if (!total) {
-    const now = Date.now();
-    await env.DB.batch(
-      STATION_SEED.map((station) =>
-        env.DB.prepare(
-          'INSERT OR IGNORE INTO stations (id, name, platform, status, sort, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-        ).bind(station.id, station.name, station.platform, 'free', station.sort, now)
-      )
-    );
-  }
+
+  // Always re-assert the seed rows so a station added later (the arcade) shows
+  // up on databases that were created before it.
+  const now = Date.now();
+  await env.DB.batch(
+    STATION_SEED.map((station) =>
+      env.DB.prepare(
+        'INSERT OR IGNORE INTO stations (id, name, platform, status, sort, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
+      ).bind(station.id, station.name, station.platform, 'free', station.sort, now)
+    )
+  );
 }
 
 const dhakaDayStart = (now) => Math.floor((now + DHAKA_OFFSET) / 86400000) * 86400000 - DHAKA_OFFSET;
@@ -302,6 +317,7 @@ async function readState(env, includePlayer = false) {
       minutes: row.minutes,
       player: includePlayer ? row.player : null,
       note: row.note,
+      timed: isTimed(row.platform),
       updatedAt: row.updated_at,
     })),
     recentSessions: (sessions.results ?? []).map((row) => ({
@@ -415,6 +431,9 @@ async function stationAction(env, admin, request) {
   const now = Date.now();
 
   if (action === 'start') {
+    if (!isTimed(station.platform)) {
+      return json({ error: 'The arcade is walk-up: tokens at the counter, no timer.' }, 400);
+    }
     if (station.status === 'blocked') return json({ error: 'This station is blocked' }, 409);
     if (station.status === 'busy' && station.started_at) {
       return json({ error: 'That station is already running a session' }, 409);
@@ -574,6 +593,25 @@ export default {
         // The board shows who is playing, as the shop asked.
         // Read-only public data, so the public site can be hosted on another origin.
         return json(await readState(env, true), 200, { 'access-control-allow-origin': '*' });
+      }
+
+      if (url.pathname === '/api/announcements' && method === 'GET') {
+        const rows = await env.DB.prepare(
+          'SELECT id, title, body, created_at, updated_at FROM announcements WHERE active = 1 ORDER BY created_at DESC LIMIT 20'
+        ).all();
+        return json(
+          {
+            announcements: (rows.results ?? []).map((row) => ({
+              id: row.id,
+              title: row.title,
+              body: row.body,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+            })),
+          },
+          200,
+          { 'access-control-allow-origin': '*' }
+        );
       }
 
       if (url.pathname === '/api/auth/setup' && method === 'GET') {
@@ -757,6 +795,71 @@ export default {
       if (url.pathname === '/api/station' && method === 'POST') {
         if (!admin) return json({ error: 'Sign in to run the counter.' }, 401);
         return stationAction(env, admin, request);
+      }
+
+      if (url.pathname === '/api/admin/announcements' && method === 'GET') {
+        if (!admin) return json({ error: 'Sign in to manage announcements.' }, 401);
+        const rows = await env.DB.prepare(
+          'SELECT id, title, body, active, created_at, updated_at, created_by FROM announcements ORDER BY created_at DESC LIMIT 50'
+        ).all();
+        return json({
+          announcements: (rows.results ?? []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            body: row.body,
+            active: Boolean(row.active),
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            createdBy: row.created_by,
+          })),
+        });
+      }
+
+      if (url.pathname === '/api/admin/announcements' && method === 'POST') {
+        if (!admin) return json({ error: 'Sign in to post an announcement.' }, 401);
+        const body = await readJson(request);
+        const title = typeof body?.title === 'string' ? body.title.trim().slice(0, 80) : '';
+        const text = typeof body?.body === 'string' ? body.body.trim().slice(0, 600) : '';
+        if (text.length < 3) return json({ error: 'Write the announcement before posting.' }, 400);
+
+        const now = Date.now();
+        const created = await env.DB.prepare(
+          'INSERT INTO announcements (title, body, active, created_at, updated_at, created_by) VALUES (?, ?, 1, ?, ?, ?)'
+        )
+          .bind(title || null, text, now, now, admin.username)
+          .run();
+        await audit(env, admin.id, 'announcement.create', text.slice(0, 60));
+        return json({ ok: true, id: created.meta?.last_row_id ?? null });
+      }
+
+      const announcementAction = url.pathname.match(/^\/api\/admin\/announcements\/(\d+)(\/delete)?$/);
+      if (announcementAction && method === 'POST') {
+        if (!admin) return json({ error: 'Sign in to manage announcements.' }, 401);
+        const id = Number(announcementAction[1]);
+        const row = await env.DB.prepare('SELECT * FROM announcements WHERE id = ?').bind(id).first();
+        if (!row) return json({ error: 'No such announcement' }, 404);
+
+        if (announcementAction[2]) {
+          await env.DB.prepare('DELETE FROM announcements WHERE id = ?').bind(id).run();
+          await audit(env, admin.id, 'announcement.delete', String(id));
+          return json({ ok: true });
+        }
+
+        const body = await readJson(request);
+        const title =
+          typeof body?.title === 'string' ? body.title.trim().slice(0, 80) : row.title ?? '';
+        const text =
+          typeof body?.body === 'string' ? body.body.trim().slice(0, 600) : row.body;
+        const active = typeof body?.active === 'boolean' ? (body.active ? 1 : 0) : row.active;
+        if (text.length < 3) return json({ error: 'Write the announcement before saving.' }, 400);
+
+        await env.DB.prepare(
+          'UPDATE announcements SET title = ?, body = ?, active = ?, updated_at = ? WHERE id = ?'
+        )
+          .bind(title || null, text, active, Date.now(), id)
+          .run();
+        await audit(env, admin.id, 'announcement.update', String(id));
+        return json({ ok: true });
       }
 
       if (url.pathname === '/api/admin/team' && method === 'GET') {

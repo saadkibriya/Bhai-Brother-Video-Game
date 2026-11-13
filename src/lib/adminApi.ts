@@ -1,3 +1,5 @@
+import type { AdminAnnouncement } from './announcements';
+
 export type AdminRole = 'owner' | 'admin';
 
 export interface Admin {
@@ -102,4 +104,17 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ password }),
     }),
+  announcements: () => call<{ announcements: AdminAnnouncement[] }>('/api/admin/announcements'),
+  createAnnouncement: (input: { title?: string; body: string }) =>
+    call<{ ok: true; id: number | null }>('/api/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateAnnouncement: (id: number, input: { title?: string; body?: string; active?: boolean }) =>
+    call<{ ok: true }>(`/api/admin/announcements/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteAnnouncement: (id: number) =>
+    call<{ ok: true }>(`/api/admin/announcements/${id}/delete`, { method: 'POST' }),
 };

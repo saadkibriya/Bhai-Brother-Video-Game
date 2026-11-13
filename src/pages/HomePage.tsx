@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { BAYS, FAQS, GAMES, PASSES, SHOP, TOURNAMENT, photos } from '../data/shop';
 import { GameCard } from '../components/GameCard';
+import { Announcements } from '../components/Announcements';
 import { LiveBoard } from '../components/LiveBoard';
 import { OpenStatus } from '../components/OpenStatus';
 import { ArrowIcon, ChatIcon, PinIcon } from '../components/icons';
@@ -133,6 +134,8 @@ export function HomePage() {
           </p>
         </div>
       </section>
+
+      <Announcements />
 
       <section className="band band--paper" id="rates">
         <div className="wrap">

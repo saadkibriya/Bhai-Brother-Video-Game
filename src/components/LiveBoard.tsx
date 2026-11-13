@@ -52,18 +52,29 @@ export function LiveBoard({ compact = false }: { compact?: boolean }) {
             <h3>{station.name}</h3>
             <p className="station__status">
               <span className="station__dot" aria-hidden="true" />
-              {running && station.startedAt
-                ? `${statusLabel(station.status)} · ${elapsedLabel(station.startedAt, Date.now())}`
-                : statusLabel(station.status)}
+              {!station.timed
+                ? station.status === 'blocked'
+                  ? 'Out of order'
+                  : 'Walk-up'
+                : running && station.startedAt
+                  ? `${statusLabel(station.status)} · ${elapsedLabel(station.startedAt, Date.now())}`
+                  : statusLabel(station.status)}
             </p>
-            {station.status === 'busy' && station.player && (
+            {station.timed && station.status === 'busy' && station.player && (
               <p className="station__player">{station.player}</p>
             )}
-            {station.status === 'busy' && station.endsAt && (
+            {station.timed && station.status === 'busy' && station.endsAt && (
               <p className="station__meta">Booked until {clockLabel(station.endsAt)}</p>
             )}
-            {station.status === 'blocked' && (
-              <p className="station__meta">Out of service right now.</p>
+            {!station.timed && (
+              <p className="station__meta">
+                {station.status === 'blocked'
+                  ? 'Cannot be used right now — ask the counter.'
+                  : '3 tokens for ৳10 · tokens at the counter, no booking.'}
+              </p>
+            )}
+            {station.timed && station.status === 'blocked' && (
+              <p className="station__meta">Out of order right now.</p>
             )}
           </article>
         );

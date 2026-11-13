@@ -16,6 +16,7 @@ import {
 } from '../lib/stations';
 import { durationLabel } from '../lib/pricing';
 import { adminApi, type Admin } from '../lib/adminApi';
+import { AdminAnnouncements } from './AdminAnnouncements';
 import { AdminTeam } from './AdminTeam';
 
 interface Toast {
@@ -246,42 +247,51 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
                     )}
                   </div>
 
-                  <p className="station__timer">
-                    {running && station.startedAt ? elapsedLabel(station.startedAt, now) : '--:--'}
-                  </p>
+                  {!station.timed && (
+                    <p className="station__meta">
+                      Walk-up · tokens at the counter. No timer — block it when it is out of order.
+                    </p>
+                  )}
 
-                  {station.status === 'busy' && station.endsAt && (
+                  {station.timed && (
+                    <p className="station__timer">
+                      {running && station.startedAt ? elapsedLabel(station.startedAt, now) : '--:--'}
+                    </p>
+                  )}
+
+                  {station.timed && station.status === 'busy' && station.endsAt && (
                     <p className="station__remaining" data-late={station.endsAt - now <= 5 * 60_000}>
                       {remainingLabel(station.endsAt, now)}
                     </p>
                   )}
 
                   <div className="station__actions">
-                    {station.status === 'busy' ? (
-                      <button
-                        className="btn btn--flame"
-                        type="button"
-                        disabled={working === `${station.id}:stop`}
-                        onClick={() => run(station, 'stop')}
-                      >
-                        End session
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn--flame"
-                        type="button"
-                        disabled={station.status === 'blocked' || working === `${station.id}:start`}
-                        onClick={() => {
-                          setStarting(station.id);
-                          setStartDraft({ player: '', minutes: 60 });
-                          setError('');
-                        }}
-                      >
-                        Start session
-                      </button>
-                    )}
+                    {station.timed &&
+                      (station.status === 'busy' ? (
+                        <button
+                          className="btn btn--flame"
+                          type="button"
+                          disabled={working === `${station.id}:stop`}
+                          onClick={() => run(station, 'stop')}
+                        >
+                          End session
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn--flame"
+                          type="button"
+                          disabled={station.status === 'blocked' || working === `${station.id}:start`}
+                          onClick={() => {
+                            setStarting(station.id);
+                            setStartDraft({ player: '', minutes: 60 });
+                            setError('');
+                          }}
+                        >
+                          Start session
+                        </button>
+                      ))}
 
-                    {station.status === 'busy' && station.endsAt && station.endsAt < now && (
+                    {station.timed && station.status === 'busy' && station.endsAt && station.endsAt < now && (
                       <button
                         className="btn btn--ghost"
                         type="button"
@@ -402,6 +412,8 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
               </table>
             )}
           </div>
+
+          <AdminAnnouncements />
 
           {admin.role === 'owner' && <AdminTeam currentAdminId={admin.id} />}
         </div>

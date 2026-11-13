@@ -13,6 +13,8 @@ export interface StationState {
   minutes: number | null;
   player: string | null;
   note: string | null;
+  /** Consoles run timers; the arcade is walk-up tokens and can only be blocked. */
+  timed: boolean;
   updatedAt: number;
 }
 
