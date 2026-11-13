@@ -14,3 +14,6 @@ artifacts/
 
 # Generated owner login, kept out of git
 .admin-credentials
+
+# Client handover report (contains the owner login, kept out of the public repo)
+report.md

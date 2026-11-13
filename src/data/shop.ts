@@ -3,14 +3,12 @@ import tekken8 from '../assets/images/tekken8.webp';
 import racing from '../assets/images/racing.webp';
 import spiderman from '../assets/images/spiderman.webp';
 import loungeLarge from '../assets/images/lounge-1200.webp';
-import loungeSmall from '../assets/images/lounge-700.webp';
 import type { Platform } from '../lib/pricing';
 
 export { SHOP } from './contact';
 
 export const photos = {
   lounge: loungeLarge,
-  loungeSmall,
 };
 
 export interface Bay {

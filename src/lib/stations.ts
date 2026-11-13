@@ -29,7 +29,6 @@ export interface SessionRecord {
 
 export interface ShopState {
   now: number;
-  adminConfigured: boolean;
   sessionsToday: number;
   minutesToday: number;
   stations: StationState[];
@@ -45,15 +44,6 @@ export async function fetchState(): Promise<ShopState> {
   const response = await fetch(`${API_BASE}/api/status`, { cache: 'no-store', credentials: 'same-origin' });
   if (!response.ok) throw new Error(await readError(response));
   return (await response.json()) as ShopState;
-}
-
-export async function adminVerify(key: string): Promise<void> {
-  const response = await fetch('/api/admin/verify', {
-    method: 'POST',
-    headers: { 'x-admin-key': key },
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error(await readError(response));
 }
 
 export async function adminAction(
@@ -82,7 +72,6 @@ export function elapsedLabel(startedAt: number, now: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`;
 }
 
-export const ALERT_MINUTES = [10, 5, 0] as const;
 export type AlertKind = 'ten' | 'five' | 'end';
 
 export const SESSION_LENGTHS = [30, 60, 90, 120, 180] as const;

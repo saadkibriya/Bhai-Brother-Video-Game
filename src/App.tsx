@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -7,11 +7,17 @@ import { GamesPage } from './pages/GamesPage';
 import { PricingPage } from './pages/PricingPage';
 import { BookPage } from './pages/BookPage';
 import { VisitPage } from './pages/VisitPage';
-import { AdminPage } from './pages/AdminPage';
-import { AdminSettingsPage } from './pages/AdminSettingsPage';
-import { QrPage } from './pages/QrPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { PUBLIC_ONLY, ROUTER_BASE } from './lib/siteMode';
+
+// Staff-only screens are split out so visitors never download them.
+const AdminPage = lazy(() =>
+  import('./pages/AdminPage').then((module) => ({ default: module.AdminPage }))
+);
+const AdminSettingsPage = lazy(() =>
+  import('./pages/AdminSettingsPage').then((module) => ({ default: module.AdminSettingsPage }))
+);
+const QrPage = lazy(() => import('./pages/QrPage').then((module) => ({ default: module.QrPage })));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -32,21 +38,23 @@ export default function App() {
       </a>
       <Header />
       <main id="main">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/games" element={<GamesPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/book" element={<BookPage />} />
-          <Route path="/visit" element={<VisitPage />} />
-          {!PUBLIC_ONLY && (
-            <>
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              <Route path="/qr" element={<QrPage />} />
-            </>
-          )}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/games" element={<GamesPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/book" element={<BookPage />} />
+            <Route path="/visit" element={<VisitPage />} />
+            {!PUBLIC_ONLY && (
+              <>
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                <Route path="/qr" element={<QrPage />} />
+              </>
+            )}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
       </main>
       <Footer />
     </BrowserRouter>

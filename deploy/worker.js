@@ -179,6 +179,18 @@ async function cleanupTestData(env) {
   ]);
 }
 
+// A forgotten session that ran for days wrecks the day's totals. A real
+// session cannot exceed the 300-minute maximum by much, so drop the outliers
+// once and never again.
+async function cleanupRunawaySessions(env) {
+  const done = await env.DB.prepare("SELECT value FROM meta WHERE key = 'cleanup-runaway-sessions'").first();
+  if (done) return;
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM sessions WHERE minutes > 600'),
+    env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('cleanup-runaway-sessions', 'done')"),
+  ]);
+}
+
 async function ensureSchema(env) {
   await env.DB.batch([
     env.DB.prepare(
@@ -273,6 +285,7 @@ async function ensureSchema(env) {
   await ensureColumn(env, 'sessions', 'planned_minutes', 'INTEGER');
 
   await cleanupTestData(env);
+  await cleanupRunawaySessions(env);
 
   // Always re-assert the seed rows so a station added later (the arcade) shows
   // up on databases that were created before it.

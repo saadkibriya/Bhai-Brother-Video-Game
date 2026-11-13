@@ -20,7 +20,7 @@ export function QrPage() {
           <p className="qr-card__foot">
             {SHOP.address}
             <br />
-            {SHOP.phone} · is.gd/bhaibrother
+            {SHOP.phone} · is.gd/bhaibrothergame
           </p>
           <p className="qr-card__credit">Site by Techsomaj · All rights reserved</p>
         </div>
@@ -41,9 +41,8 @@ export function QrPage() {
             Print this page
           </button>
           <p className="summary__note">
-            The code is generated from the production address and shipped as a static image, so it
-            prints sharp and works without a network at the counter. If the address ever changes,
-            the code needs to be regenerated and the sheet reprinted.
+            The code is generated from the short address and shipped as a static image, so it prints
+            sharp and works without a network at the counter.
           </p>
         </div>
       </div>

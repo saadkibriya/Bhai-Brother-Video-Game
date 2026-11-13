@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { writeFile } from 'node:fs/promises';
 
-const DEFAULT_URL = 'https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page/';
+const DEFAULT_URL = 'https://is.gd/bhaibrothergame';
 const url = process.argv[2] || process.env.SITE_URL || DEFAULT_URL;
 
 const svg = await QRCode.toString(url, {

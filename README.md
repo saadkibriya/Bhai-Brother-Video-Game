@@ -1,61 +1,31 @@
 # Bhai Brother Video Game
 
-The shop site for Bhai Brother Video Game — PS5, PS4 and an arcade corner in Green City,
-Block C, Mohammadpur, Dhaka.
-
-Static React + Vite build. No database, no login, no fake admin panel. Bookings are
-composed on the page and sent to the shop's WhatsApp, which is how the counter actually
-works.
+The shop site for Bhai Brother Video Game — PS5, PS4 and an arcade corner in Green City, Block C,
+Mohammadpur, Dhaka. React + Vite, with a small Cloudflare Worker + D1 backend for the live station
+board, the staff panel and the noticeboard.
 
 ## Run it
 
 ```bash
 bun install
 bun run dev      # http://localhost:3000
-```
-
-```bash
-bun test         # pricing, Dhaka hours, slot and booking-message logic
+bun test         # pricing, Dhaka hours, booking and station logic
 bun run build    # typecheck + production build into dist/
+bun run qr       # regenerate public/qr-site.svg from the short link
 ```
 
-## What is where
+## Two deployments, one source
 
-| Path | Purpose |
-| --- | --- |
-| `src/data/contact.ts` | Address, phone, WhatsApp number, map links |
-| `src/data/shop.ts` | Games, station copy, passes, FAQ, tournament |
-| `src/lib/pricing.ts` | Rates, 30-minute billing, squad pass, quotes |
-| `src/lib/hours.ts` | Dhaka opening hours and open/closed status |
-| `src/lib/booking.ts` | Dates, slots, phone validation, WhatsApp message |
-| `src/pages/` | Home, Games, Rates, Book, Visit, 404 |
-| `src/styles.css` | The whole design system, hand-written |
-| `scripts/optimize-images.mjs` | Source photos → webp covers, icons, `og.jpg` |
+| Site | Where | Contains |
+| --- | --- | --- |
+| Customer site | GitHub Pages, `docs/` on `main` → https://saadkibriya.github.io/Bhai-Brother-Video-Game/ | Home, games, rates, booking, visit, live board, noticeboard |
+| Counter site | Cloudflare Worker (Freebuff Sites) | The same public pages plus `/admin`, `/admin/settings`, `/qr` and the API |
 
-## Editing content
-
-- **Prices** live in `src/lib/pricing.ts` (`RATES`, `SQUAD_PASS`) and `PASSES` in
-  `src/data/shop.ts`. The calculator, booking estimate and rate board all read from those.
-- **Hours** live in `src/lib/hours.ts`. A close time after midnight (`01:00`) is handled.
-- **Games** are a plain array in `src/data/shop.ts`. Covers are optional; tiles without one
-  get a typographic placeholder.
-- **Photos**: drop originals in `src/assets/source/`, run `bun run images`, and import the
-  generated webp from `src/assets/images/`.
-- **Bookings** go to `SHOP.whatsapp` in `src/data/contact.ts`. Change that number and the
-  whole booking flow follows.
-
-## Deploying
-
-There are two builds from the same source.
-
-**Counter site** — `bun run build` → `dist/`. This one carries the staff panel, the QR page and
-its own `/api`, so it must stay on the Worker host (Freebuff Sites). It is live at
-`https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page`.
-
-**Public site** — GitHub Pages, from the `docs/` folder on `main`:
-`https://saadkibriya.github.io/Bhai-Brother-Video-Game/`.
+The panel needs a database, so it only exists on the Worker host. The customer site's Staff link
+opens that host.
 
 ```bash
+# customer build — rerun and commit docs/ to publish
 VITE_PUBLIC_ONLY=1 \
 VITE_SITE_BASE=/Bhai-Brother-Video-Game/ \
 VITE_OUT_DIR=docs \
@@ -64,74 +34,64 @@ VITE_API_BASE=https://site-1aa9915efd1d466db27090dd5abebf4b.freebuff.page \
 bun run build
 ```
 
-That build drops `/admin`, `/admin/settings` and `/qr`, rewrites canonical/Open Graph URLs,
-`robots.txt`, `sitemap.xml` and the manifest for the new origin, writes one `index.html` per
-public route (Pages has no rewrites) plus a `404.html` fallback, and removes `sw.js` and the
-QR artwork. The live board reads the public read-only `/api/status` from the counter host.
-Commit the regenerated `docs/` and push; Pages redeploys from `main` → `/docs`.
+That build hides the staff routes, rewrites canonical/Open Graph URLs, `robots.txt`, `sitemap.xml`
+and the manifest, writes one `index.html` per public route (Pages has no rewrites) plus a `404.html`
+fallback, and drops `sw.js` and the QR artwork. The live board and noticeboard read the public API
+on the Worker host.
 
-`supabase/` and the old spec documents were removed with the fake backend; they remain in
-git history if a real booking database is ever added.
+## Layout
 
-## Live station status and the counter panel
+| Path | Purpose |
+| --- | --- |
+| `src/data/contact.ts` | Address, phone, WhatsApp number, map links |
+| `src/data/shop.ts` | Games, station copy, passes, FAQ, tournament |
+| `src/lib/pricing.ts` | Rates, 30-minute billing, squad pass, quotes |
+| `src/lib/hours.ts` | Dhaka opening hours and open/closed status |
+| `src/lib/stations.ts` | Station types, timers, alerts, API calls |
+| `src/lib/siteMode.ts` | Public-build flags, API base, router base, panel URL |
+| `src/pages/` | Home, Games, Rates, Book, Visit, Admin, Admin settings, QR, 404 |
+| `src/styles.css` | The whole design system, hand-written |
+| `deploy/worker.js` | Worker: API, D1 schema, auth, stations, announcements |
+| `scripts/optimize-images.mjs` | Source photos → webp covers, icons, `og.jpg` |
+| `public/` | Favicon, icons, manifest, OG image, QR image, service worker |
 
-`/` shows a live board for the three stations (PS5 #1, PS4 #1, Arcade cabinet): free, in use with a
-running timer, or blocked. The counter panel is `/admin` — the footer links to it as "Staff panel".
+## Staff panel
 
-Both are backed by the Worker API in `deploy/worker.js` and a D1 database bound as `DB`:
+`/admin` on the counter host. Accounts are per person: passwords are PBKDF2-hashed in D1, sessions
+are random tokens in an HttpOnly, Secure, SameSite=Strict cookie that lasts a year and slides forward
+while it is used. Roles are **owner** (manage admins, reset codes, disable accounts) and **admin**
+(run the counter).
+
+- **Stations** — consoles get a timer with 10/5/0-minute alerts; the arcade is walk-up and can only
+  be blocked (out of order). `End session` logs the time; `Cancel` (offered once a session is
+  overdue) frees the station without logging.
+- **Noticeboard** — post a heading and text; it appears on the customer home page immediately.
+  Hide takes it off the site, delete removes it.
+- **Team** — the owner adds admins, issues one-time 6-digit reset codes and disables accounts.
+- **Account settings** — change username or password (current password required; a password change
+  signs out other devices).
+
+### API
 
 | Route | Method | Auth | Purpose |
 | --- | --- | --- | --- |
-| `/api/status` | GET | none | Stations, running timers, today's session count |
-| `/api/admin/verify` | POST | `x-admin-key` | Check the key before unlocking the panel |
-| `/api/station` | POST | `x-admin-key` | `{ id, action }` with `start` \| `stop` \| `block` \| `unblock` |
+| `/api/status` | GET | none | Stations, timers, player names, today's totals |
+| `/api/announcements` | GET | none | Active announcements |
+| `/api/auth/login` \| `logout` \| `me` \| `password` \| `username` | POST/GET | cookie | Session and account |
+| `/api/auth/setup` \| `forgot` \| `reset` \| `recover` | POST/GET | key or code | First run and password recovery |
+| `/api/station` | POST | cookie | `start` \| `stop` \| `cancel` \| `block` \| `unblock` |
+| `/api/admin/announcements` | GET/POST | cookie | Noticeboard management |
+| `/api/admin/team` | GET/POST | owner | Admin accounts |
 
-The Worker creates the `stations` and `sessions` tables and seeds the three stations on first use.
-`start` stamps `started_at`; `stop` writes the rounded minute count to `sessions` and frees the
-station; `block` marks it out of service (and refuses to start a timer until unblocked).
+`ADMIN_KEY` (a Sites secret) is only used for first-run setup and owner recovery. D1 creates its
+tables on first request; there is no separate migration step.
 
-The panel key lives in the `ADMIN_KEY` secret, never in the bundle. Set it under
-**Sites → Secrets**, then open `/admin` and unlock with the same value. The key is kept in
-`sessionStorage` for that tab only, and the panel's Lock button clears it. If `ADMIN_KEY` is
-missing, the public board still works and the panel says so instead of accepting writes.
+## Content edits
 
-`ADMIN_KEY` must be set for both the preview and production environments before writes work there.
-
-## Admin accounts
-
-The counter panel uses per-person accounts, not a shared key. Passwords are hashed with PBKDF2
-(SHA-256, 60k iterations, per-account salt) in D1; sessions are random 32-byte tokens stored hashed
-and sent as an HttpOnly, Secure, SameSite=Strict cookie that lasts 12 hours.
-
-Roles: **owner** (adds admins, issues reset codes, disables accounts) and **admin** (times sessions,
-blocks stations). The panel refuses station writes without a session, and `POST` requests from
-another origin are rejected.
-
-First run: open `/admin` and create the main admin with the `ADMIN_KEY` setup key, or call
-`POST /api/auth/setup` with `x-admin-key`. Locked out? `POST /api/auth/recover` with the same secret
-resets an owner password.
-
-### Password reset
-
-There is no SMS/WhatsApp API wired in, so the verification happens in the WhatsApp chat the shop
-already uses:
-
-1. The admin enters their username on `/admin` → a reset request is recorded (3 per hour, same
-   response whether the username exists or not).
-2. The owner verifies who they are on WhatsApp, opens **Team**, and taps **Reset code**.
-3. The panel shows a 6-digit code valid for 30 minutes, single use. The owner sends it to the admin.
-4. The admin enters the code and a new password. All that admin's sessions are signed out.
-
-### Adding admins
-
-The owner creates a username, name, role and (optional) temporary password. The panel shows the
-temporary password once, with a **Notify main WhatsApp** link that opens a prefilled message to
-`SHOP.whatsapp`. The new admin is prompted to change the password after signing in.
-
-### Tables
-
-`admins`, `admin_sessions`, `reset_requests`, `audit_log`, plus the existing `stations` and
-`sessions`. Created automatically on the first request; there is no separate migration step.
+- Prices: `src/lib/pricing.ts` (`RATES`, `SQUAD_PASS`) and `PASSES` in `src/data/shop.ts`.
+- Hours: `src/lib/hours.ts`; a close time after midnight is handled.
+- Games: the `GAMES` array in `src/data/shop.ts`; covers are optional.
+- Photos: drop originals in `src/assets/source/`, run `bun run images`.
 
 ## Credit
 
