@@ -1,7 +1,7 @@
 import { API_BASE } from './siteMode';
 
 export type StationStatus = 'free' | 'busy' | 'blocked';
-export type StationAction = 'start' | 'stop' | 'block' | 'unblock';
+export type StationAction = 'start' | 'stop' | 'cancel' | 'block' | 'unblock';
 
 export interface StationState {
   id: string;

@@ -408,7 +408,7 @@ async function stationAction(env, admin, request) {
   const station = await env.DB.prepare('SELECT * FROM stations WHERE id = ?').bind(id).first();
 
   if (!station) return json({ error: 'Unknown station' }, 404);
-  if (!['start', 'stop', 'block', 'unblock'].includes(action)) {
+  if (!['start', 'stop', 'cancel', 'block', 'unblock'].includes(action)) {
     return json({ error: 'Unknown action' }, 400);
   }
 
@@ -454,6 +454,18 @@ async function stationAction(env, admin, request) {
         .bind(now, id)
         .run();
     }
+  }
+
+  if (action === 'cancel') {
+    // A forgotten or mis-started session: free the station without writing a
+    // session record, so the day's minutes stay honest.
+    if (station.status !== 'busy') return json({ error: 'That station is not in a session' }, 409);
+    await env.DB.prepare(
+      "UPDATE stations SET status = 'free', started_at = NULL, ends_at = NULL, minutes = NULL, player = NULL, updated_at = ? WHERE id = ?"
+    )
+      .bind(now, id)
+      .run();
+    await audit(env, admin.id, 'session.cancel', `${station.player ?? 'player'} on ${station.name}`);
   }
 
   if (action === 'block' || action === 'unblock') {

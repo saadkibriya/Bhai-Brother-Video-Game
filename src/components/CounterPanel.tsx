@@ -124,7 +124,7 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
     try {
       const next = await adminAction(station.id, action, details);
       setState(next);
-      if (action === 'stop') {
+      if (action === 'stop' || action === 'cancel') {
         delete fired.current[`${station.id}:${station.startedAt}`];
         setEnded(null);
       }
@@ -278,6 +278,18 @@ export function CounterPanel({ admin, onSignOut }: { admin: Admin; onSignOut: ()
                         }}
                       >
                         Start session
+                      </button>
+                    )}
+
+                    {station.status === 'busy' && station.endsAt && station.endsAt < now && (
+                      <button
+                        className="btn btn--ghost"
+                        type="button"
+                        disabled={working === `${station.id}:cancel`}
+                        onClick={() => run(station, 'cancel')}
+                        title="Free the station without recording playing time"
+                      >
+                        Cancel
                       </button>
                     )}
 
