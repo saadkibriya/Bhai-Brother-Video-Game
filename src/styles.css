@@ -2709,3 +2709,8 @@ h3 {
   gap: 0.4rem;
   align-items: center;
 }
+
+.announcements .section-head > p {
+  color: inherit;
+  opacity: 0.85;
+}
